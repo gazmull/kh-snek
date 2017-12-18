@@ -8,3 +8,6 @@ Used in conjunction with [Kamihime Database](https://bitbucket.org/gazmull/kamih
 * `$ git clone https://gazmull@bitbucket.org/gazmull/snek.git`
 * `$ cd snek`
 * `$ node .`
+
+# Finally
+* Please use this wisely.
