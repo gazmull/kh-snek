@@ -2,6 +2,6 @@
 
 downloadimagesfromnutakuserverlykaboss
 
-# Installation
+# How to Use
 ```
-$ npm install bitbucket:gazmull/snek```
+$ git clone https://gazmull@bitbucket.org/gazmull/snek.git```
