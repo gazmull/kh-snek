@@ -3,5 +3,5 @@
 downloadimagesfromnutakuserverlykaboss
 
 # Installation
-```js
-npm install bitbucket:gazmull/snek```
+```
+$ npm install bitbucket:gazmull/snek```
