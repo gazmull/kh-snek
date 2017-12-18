@@ -7,6 +7,7 @@ Used in conjunction with [Kamihime Database](https://bitbucket.org/gazmull/kamih
 # How to Use
 * `$ git clone https://gazmull@bitbucket.org/gazmull/snek.git`
 * `$ cd snek`
+* `$ npm install`
 * `$ node .`
 
 # Finally
