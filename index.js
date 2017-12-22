@@ -47,7 +47,7 @@ process.on('unhandledRejection', err => {
 
 async function start() {
     try {
-        await sql.open('../eros/db/Eros.db');
+        await sql.open('./db/Resources.db');
         const row = await sql.all('SELECT khID, khName, khHarem_hentai1Resource2, khHarem_hentai2Resource2 FROM kamihime WHERE khHarem_hentai1Resource2 IS NOT NULL ORDER BY khID DESC');
         for (let i = 0; i <= row.length; i++) {
             if(i === row.length) break;
