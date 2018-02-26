@@ -1,6 +1,6 @@
 module.exports = {
   api: {
     url: 'http://localhost/api/',
-    token: 'whatismytokenifihaveone'
+    directory: `${__dirname}/static/scenarios/`
   }
 };

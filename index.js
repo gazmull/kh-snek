@@ -1,7 +1,7 @@
 const { get } = require('snekfetch');
 const Downloader = require('./utils/Downloader');
 
-const { api } = require('./auth');
+const { api, directory } = require('./auth');
 
 const kamihime = {
   intro: '94/76/',
@@ -26,7 +26,7 @@ const sequences = ['a', 'b', 'c1', 'c2', 'c3', 'd'];
 // link structure:
 // https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/d7/ad/a1ef0e1bc4d7da47935eae9c20e388b806f12ba16f14d7ad/0037-2-2_d.jpg
 const baseURL = { scenarios: 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/' };
-const baseDestination = `${__dirname}/static/scenarios/`;
+const baseDestination = directory || `${__dirname}/static/scenarios/`;
 
 const ouroboros = 'e0044';
 
@@ -71,7 +71,7 @@ async function start() {
         for (const sequence of sequences) {
           const fileInfo = new Downloader({
             url: `${baseURL.scenarios}${characterCode(list[i])}${resource2}/${isOuroboros(list[i].khID, r)}_${sequence}.jpg`,
-            destDirectory: `${baseDestination}${resource2}`,
+            destDirectory: `${baseDestination}${list[i].khID}/${resource2}`,
             filename: `${isOuroboros(list[i].khID, r)}_${sequence}.jpg`
           });
 
