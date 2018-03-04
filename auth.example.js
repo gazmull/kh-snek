@@ -1,4 +1,4 @@
 module.exports = {
   api: { url: 'http://localhost/api/' },
-  directory: `${__dirname}/static/scenarios/`
+  directory: `${__dirname}../kamihime-database/static/scenarios/`
 };

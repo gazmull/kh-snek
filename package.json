@@ -1,19 +1,22 @@
 {
   "name": "snek",
   "version": "1.0.0",
-  "description": "downloadimagesfromnutakuserverlykaboss",
+  "description": "nocomment",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint --ignore-path .gitignore ."
+    "test": "eslint --ignore-path .gitignore .",
+    "lint": "eslint --ignore-path .gitignore . --fix"
+  },
+  "engine": {
+    "node": ">=9"
   },
   "keywords": [
     "just",
     "snek"
   ],
-  "repository": "https://gazmull@bitbucket.org/gazmull/snek.git",
-  "homepage": "https://bitbucket.org/gazmull/snek/overview",
-  "author": "https://bitbucket.org/gazmull/",
+  "repository": "https://github.com/gazmull/snek.git",
+  "homepage": "https://github.com/gazmull/snek",
+  "author": "https://github.com/gazmull",
   "license": "MIT",
   "dependencies": {
     "mkdirp": "^0.5.1",
