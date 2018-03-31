@@ -8,6 +8,8 @@ class Extractor {
 
     this.readDirectory = require('fs').readdirSync;
 
+    this.writeFile = require('fs').writeFileSync;
+
     /* eslint-enable global-require */
 
     this.base = options.base;
@@ -19,10 +21,12 @@ class Extractor {
     this.filesDownloaded = 0;
 
     this.filesFound = 0;
+
+    this.errors = [];
   }
 
   async execute() {
-    const { get, readDirectory, base, codes, links } = this;
+    const { get, readDirectory, writeFile, base, codes, links, errors } = this;
     const characters = readDirectory(base.scripts);
     let { filesDownloaded, filesFound } = this;
 
@@ -30,8 +34,9 @@ class Extractor {
       const characterScripts = `${base.scripts}${character}/`;
       const scripts = readDirectory(characterScripts);
       const splitChar = character.split('_');
-      const type = splitChar[0];
-      let name = splitChar[1];
+      const [type] = splitChar;
+      let [, name] = splitChar;
+      let id = null;
       let names = await get(`${base.url.api}search?name=${character.split('_').pop()}`);
       names = names.body;
 
@@ -39,27 +44,30 @@ class Extractor {
         continue;
 
       else if (names.length === 1)
-        name = names.shift().khID;
+        id = names.shift().khID;
 
       else
         for (const i of names)
           if (i.khName.toLowerCase() === name.toLowerCase())
-            name = i.khID;
+            id = i.khID;
 
-      links[name] = {};
+      links[id] = {};
 
       for (const script of scripts) {
-        let data = require(`${characterScripts}${script}`); // eslint-disable-line global-require
+        const data = require(`${characterScripts}${script}`); // eslint-disable-line global-require
 
-        if (data.hasOwnProperty('scenario')) {
+        const scenario = [];
+        const chara = {};
+
+        if (data.scenario) {
           const resourceDirectory = data.resource_directory;
 
-          if (!links[name].hasOwnProperty(resourceDirectory))
-            links[name][resourceDirectory] = [];
+          if (!links[id][resourceDirectory])
+            links[id][resourceDirectory] = [];
 
-          data = data.scenario.split('\n');
+          const entries = data.scenario.split('\n');
 
-          for (let entry of data) {
+          for (let entry of entries) {
             const miscChar = ['*', '#', 'Tap to continue'].some(i => entry.startsWith(i));
 
             if (miscChar) continue;
@@ -69,68 +77,171 @@ class Extractor {
 
               if (entry.length < 2) continue;
 
-              const line = { command: entry[0] };
+              const line = { command: entry.shift() };
 
-              for (let record of entry.slice(1)) {
+              for (let record of entry) {
                 record = record.split('=');
-                const command = record.shift();
+                const [command, arg] = record;
 
-                if (command.length === 2)
-                  line.command = command;
-
-                if (command.startsWith('storage'))
-                  line.storage = record.shift();
+                if (record.length === 2)
+                  line[command] = arg;
               }
 
-              const startsAs = {
-                character: ['chara_new', 'chara_face'].some(i => line.command.startsWith(i)),
-                bgm: line.command.startsWith('playbgm'),
-                bg: line.command.startsWith('bg')
-              };
+              const charaName = chara[line.name];
 
-              if (startsAs.character)
-                links['0000'].misc.push(base.url.fgImage + line.storage);
+              switch (line.command) {
+                case 'chara_new': {
+                  links['0000'].misc.push(base.url.fgImage + line.storage);
 
-              if (startsAs.bgm)
-                links['0000'].misc.push(base.url.bgm + line.storage);
+                  Object.assign(chara, { [line.name]: { name: line.jname } });
 
-              if (startsAs.bg)
-                links['0000'].misc.push(base.url.bgImage + line.storage);
+                  break;
+                }
 
-              if (line.command.startsWith('playse')) {
-                const isGetIntro = ['h_get', 'h_intro'].some(i => line.storage.startsWith(i));
+                case 'chara_face': {
+                  links['0000'].misc.push(base.url.fgImage + line.storage);
 
-                if (isGetIntro)
-                  links[name][resourceDirectory].push(
-                    `${base.url.scenarios}${codes[type].intro}${resourceDirectory}/sound/${line.storage}`
-                  );
+                  if (!chara[line.name].face)
+                    Object.assign(charaName, { face: {} });
+
+                  Object.assign(charaName.face, { [line.face]: line.storage });
+
+                  break;
+                }
+
+                case 'playbgm': {
+                  links['0000'].misc.push(base.url.bgm + line.storage);
+
+                  scenario.push({ bgm: line.storage });
+
+                  break;
+                }
+
+                case 'bg': {
+                  links['0000'].misc.push(base.url.bgImage + line.storage);
+
+                  scenario.push({ expression: line.storage, bg: true });
+
+                  break;
+                }
+
+                case 'chara_show': {
+                  name = charaName.name;
+
+                  break;
+                }
+
+                case 'chara_mod': {
+                  scenario.push({ expression: charaName.face[line.face] });
+
+                  break;
+                }
+
+                case 'playse': {
+                  const isGetIntro = ['h_get', 'h_intro'].some(i => line.storage.startsWith(i));
+
+                  if (isGetIntro)
+                    links[id][resourceDirectory].push(
+                      `${base.url.scenarios}${codes[type].intro}${resourceDirectory}/sound/${line.storage}`
+                    );
+
+                  scenario.push({ voice: line.storage });
+                  break;
+                }
+
+                case 'chara_hide': {
+                  scenario.push({ name: ' ' });
+
+                  break;
+                }
               }
+            } else {
+              const text = entry
+                .replace(/(["%])/g, '\\$&')
+                .replace(/\[l\]|\[r\]|\[cm\]|^;.+/g, '')
+                .replace(/(\.{1,3})(?=[^\s\W])/g, '$& ');
+              const invalidTalk = (text.replace(/ /g, '')).length < 2;
+
+              if (invalidTalk) continue;
+
+              scenario.push({ [name]: text });
             }
           }
-        } else if (data.hasOwnProperty('scene_data')) {
+        } else if (data.scene_data) {
           const resourceDirectory = data.resource_directory;
 
-          if (!links[name].hasOwnProperty(resourceDirectory))
-            links[name][resourceDirectory] = [];
+          if (!links[id].hasOwnProperty(resourceDirectory))
+            links[id][resourceDirectory] = [];
 
           for (const entry of data.scene_data) {
-            if (entry.hasOwnProperty('bgm'))
-              links[name][resourceDirectory].push(
+            const entryData = {};
+
+            if (entry.bgm) {
+              links[id][resourceDirectory].push(
                 `${base.url.scenarios}${codes[type].scene}${resourceDirectory}/${entry.bgm}`
               );
 
-            if (entry.hasOwnProperty('film'))
-              links[name][resourceDirectory].push(
+              Object.assign(entryData, { bgm: entry.bgm });
+            }
+
+            if (entry.film) {
+              links[id][resourceDirectory].push(
                 `${base.url.scenarios}${codes[type].scene}${resourceDirectory}/${entry.film}`
               );
 
-            for (const line of entry.talk)
-              if (line.hasOwnProperty('voice'))
-                links[name][resourceDirectory].push(
+              const fps = Number(entry.fps);
+
+              Object.assign(entryData, {
+                sequence: entry.film,
+                seconds: fps === 1 || fps === 16
+                  ? 1
+                  : fps === 24
+                    ? '0.67'
+                    : 2,
+                steps: fps === 1 ? 1 : 16
+              });
+            }
+
+            const talkData = [];
+
+            for (const line of entry.talk) {
+              const talkEntry = {};
+
+              if (line.voice) {
+                links[id][resourceDirectory].push(
                   `${base.url.scenarios}${codes[type].scene}${resourceDirectory}/${line.voice}`
                 );
+
+                if (line.voice.length)
+                  Object.assign(talkEntry, { voice: line.voice });
+              }
+
+              if (!line.words.length)
+                Object.assign(talkEntry, { chara: ' ', words: 'Press NEXT to proceed' });
+
+              line.words = line.words
+                .replace(/[[\]"]/g, '')
+                .replace(/(\.{1,3})(?=[^\s\W])/g, '$& ');
+              line.chara = line.chara
+                .replace(/(["%])/g, '\\$&');
+
+              Object.assign(talkEntry, { chara: line.chara, words: line.words });
+
+              talkData.push(talkEntry);
+            }
+
+            Object.assign(entryData, { talk: talkData });
+
+            const dataArr = Object.keys(data.scene_data);
+
+            if (dataArr.indexOf(entry) === (dataArr.length - 1))
+              Object.assign(entryData, { toIndex: true });
+
+            scenario.push(entryData);
           }
         }
+
+        writeFile(`${base.destination}${id}/${data.resource_directory}.json`, JSON.stringify({ scenario }, null, 2));
       }
 
       for (const chara in links)
@@ -156,13 +267,24 @@ class Extractor {
               filesDownloaded++;
             } catch (f) {
               console.log('Error:', f.message, `-> ${chara} (${url})`);
+              errors.push(`${new Date().toLocaleString()}: ${f.stack}`);
             }
           }
         }
     }
 
-    console.log(`Extracted ${Object.keys(links).length - 1} characters. (Expected: ${characters.length})`);
-    console.log(`Downloaded ${filesDownloaded} files. (Expected: ${filesFound})`);
+    if (errors.length)
+      writeFile(`${process.cwd()}/assets_download-error-stack.log`, errors.join('\r\n').replace(/\n/g, '\r\n'));
+
+    return {
+      message: [
+        `Extracted ${Object.keys(links).length - 1} characters. (Expected: ${characters.length})`,
+        `Downloaded ${filesDownloaded} files. (Expected: ${filesFound})`,
+        errors.length
+          ? 'I have detected some errors during the process. Error log can be found at assets_download-error-stack.log.'
+          : ''
+      ]
+    };
   }
 }
 

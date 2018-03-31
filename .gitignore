@@ -3,6 +3,9 @@ node_modules
 package-lock.json
 yarn.lock
 
-#Private Credentials
+# Private Credentials
 static
 auth.js
+
+# Tests
+assets_download-error-stack.txt

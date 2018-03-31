@@ -1,7 +1,7 @@
 const Extractor = require('./utils/Extractor');
 const { api: { url: apiURL }, directory: dir } = require('./auth');
 
-const destination = dir || `${__dirname}/static/scenarios/`;
+const destination = dir || `${process.cwd()}/static/scenarios/`;
 const scripts = `${destination}scripts/`;
 const url = {
   api: apiURL,
@@ -16,13 +16,11 @@ const codes = {
     scene: 'de/59/',
     get: '76/89/'
   },
-
   eidolon: {
     intro: '9f/51/',
     scene: 'd7/ad/',
     get: '9f/51/'
   },
-
   soul: {
     intro: '67/01/',
     scene: 'ec/4d/',
@@ -30,11 +28,23 @@ const codes = {
   }
 };
 
-new Extractor({
-  base: {
-    url,
-    destination,
-    scripts
-  },
-  codes
-}).execute();
+async function start() {
+  try {
+    const { message } = await new Extractor({
+      base: {
+        url,
+        destination,
+        scripts
+      },
+      codes
+    })
+      .execute();
+
+    console
+      .log(message.join('\n'));
+  } catch (f) {
+    console.log(f.message);
+  }
+}
+
+start();
