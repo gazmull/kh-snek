@@ -223,7 +223,7 @@ class Extractor {
 
               line.words = line.words
                 .replace(/[[\]"]/g, '')
-                .replace(/(\.{1,3})(?=[^\s\W])/g, '$& ');
+                .replace(/(\.{1,3}|…)(?=[^\s\W])/g, '$& ');
               line.chara = line.chara
                 .replace(/(["%])/g, '\\$&');
 
