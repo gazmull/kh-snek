@@ -10,6 +10,10 @@ class Extractor {
 
     this.writeFile = require('fs').writeFileSync;
 
+    this.readFile = require('fs').readFileSync;
+
+    this.mkdirp = require('util').promisify(require('mkdirp'));
+
     /* eslint-enable global-require */
 
     this.base = options.base;
@@ -26,7 +30,7 @@ class Extractor {
   }
 
   async execute() {
-    const { get, readDirectory, writeFile, base, codes, links, errors } = this;
+    const { get, readDirectory, writeFile, readFile, base, codes, links, errors } = this;
     const characters = readDirectory(base.scripts);
     let { filesDownloaded, filesFound } = this;
 
@@ -54,7 +58,7 @@ class Extractor {
       links[id] = {};
 
       for (const script of scripts) {
-        const data = require(`${characterScripts}${script}`); // eslint-disable-line global-require
+        const data = JSON.parse(readFile(`${characterScripts}${script}`));
 
         const scenario = [];
         const chara = {};
@@ -120,7 +124,7 @@ class Extractor {
                 case 'bg': {
                   links['0000'].misc.push(base.url.bgImage + line.storage);
 
-                  scenario.push({ expression: line.storage, bg: true });
+                  scenario.push({ bg: line.storage });
 
                   break;
                 }
@@ -150,7 +154,7 @@ class Extractor {
                 }
 
                 case 'chara_hide': {
-                  scenario.push({ name: ' ' });
+                  scenario.push({ chara: null, words: null });
 
                   break;
                 }
@@ -159,12 +163,13 @@ class Extractor {
               const text = entry
                 .replace(/(["%])/g, '\\$&')
                 .replace(/\[l\]|\[r\]|\[cm\]|^;.+/g, '')
-                .replace(/(\.{1,3})(?=[^\s\W])/g, '$& ');
+                .replace(/(\.{1,3})(?=[^\s\W])/g, '$& ')
+                .replace(/&nbsp;/gi, ' ');
               const invalidTalk = (text.replace(/ /g, '')).length < 2;
 
               if (invalidTalk) continue;
 
-              scenario.push({ [name]: text });
+              scenario.push({ chara: name.replace(/&nbsp;/gi, ' '), words: text });
             }
           }
         } else if (data.scene_data) {
@@ -216,9 +221,6 @@ class Extractor {
                   Object.assign(talkEntry, { voice: line.voice });
               }
 
-              if (!line.words.length)
-                Object.assign(talkEntry, { chara: ' ', words: 'Press NEXT to proceed' });
-
               line.words = line.words
                 .replace(/[[\]"]/g, '')
                 .replace(/(\.{1,3})(?=[^\s\W])/g, '$& ');
@@ -227,21 +229,23 @@ class Extractor {
 
               Object.assign(talkEntry, { chara: line.chara, words: line.words });
 
+              const dataMax = data.scene_data.length - 1;
+              const lineMax = entry.talk.length - 1;
+
+              if (data.scene_data.indexOf(entry) === dataMax && entry.talk.indexOf(line) === lineMax)
+                Object.assign(talkEntry, { toIndex: true });
+
               talkData.push(talkEntry);
             }
 
             Object.assign(entryData, { talk: talkData });
 
-            const dataArr = Object.keys(data.scene_data);
-
-            if (dataArr.indexOf(entry) === (dataArr.length - 1))
-              Object.assign(entryData, { toIndex: true });
-
             scenario.push(entryData);
           }
         }
 
-        writeFile(`${base.destination}${id}/${data.resource_directory}.json`, JSON.stringify({ scenario }, null, 2));
+        await this.mkdirp(`${base.destination}${id}/${data.resource_directory}/`);
+        writeFile(`${base.destination}${id}/${data.resource_directory}/script.json`, JSON.stringify({ scenario }, null, 2));
       }
 
       for (const chara in links)
@@ -266,8 +270,8 @@ class Extractor {
 
               filesDownloaded++;
             } catch (f) {
-              console.log('Error:', f.message, `-> ${chara} (${url})`);
-              errors.push(`${new Date().toLocaleString()}: ${f.stack}`);
+              console.log('Error: ', f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.message, `-> ${chara} (${url})`);
+              errors.push(`${new Date().toLocaleString()}: [${type}: ${name} (${id})] ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
             }
           }
         }

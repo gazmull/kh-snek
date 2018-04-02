@@ -3,9 +3,12 @@ node_modules
 package-lock.json
 yarn.lock
 
+# VSC
+.vscode/
+
 # Private Credentials
 static
 auth.js
 
 # Tests
-assets_download-error-stack.txt
+assets_download-error-stack.log

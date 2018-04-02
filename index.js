@@ -1,7 +1,8 @@
 const Extractor = require('./utils/Extractor');
 const { api: { url: apiURL }, directory: dir } = require('./auth');
+const path = require('path');
 
-const destination = dir || `${process.cwd()}/static/scenarios/`;
+const destination = dir ? `${path.resolve(dir)}/` : `${process.cwd()}/static/scenarios/`;
 const scripts = `${destination}scripts/`;
 const url = {
   api: apiURL,
@@ -43,7 +44,7 @@ async function start() {
     console
       .log(message.join('\n'));
   } catch (f) {
-    console.log(f.message);
+    console.log(f.stack);
   }
 }
 
