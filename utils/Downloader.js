@@ -1,12 +1,12 @@
 const { get } = require('snekfetch');
 const mkdirp = require('mkdirp');
-const fs = require('fs');
 const path = require('path');
 const { promisify } = require('util');
+const { writeFile: wFile, stat: st } = require('fs');
 
 const mkdir = promisify(mkdirp);
-const writeFile = promisify(fs.writeFile);
-const open = promisify(fs.open);
+const writeFile = promisify(wFile);
+const stat = promisify(st);
 
 class FileDownloader {
 
@@ -30,7 +30,7 @@ class FileDownloader {
     try {
       await mkdir(filepath);
       try {
-        await open(path.join(filepath, filename), 'r+');
+        await stat(path.join(filepath, filename));
 
         return true;
       } catch (e) {
@@ -41,6 +41,10 @@ class FileDownloader {
     }
   }
 
+  /**
+   * Downloads the file.
+   * @returns {Promise.<filePath>} - path of the downloaded file.
+   */
   async download() {
     const url = this.options.url;
     const destDirectory = this.options.destination;

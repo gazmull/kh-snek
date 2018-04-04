@@ -1,4 +1,6 @@
 const Downloader = require('./Downloader');
+const fs = require('fs');
+const { promisify } = require('util');
 
 class Extractor {
   constructor(options) {
@@ -6,13 +8,13 @@ class Extractor {
 
     this.get = require('snekfetch').get;
 
-    this.readDirectory = require('fs').readdirSync;
+    this.readDirectory = promisify(fs.readdir);
 
-    this.writeFile = require('fs').writeFileSync;
+    this.readFile = promisify(fs.readFile);
 
-    this.readFile = require('fs').readFileSync;
+    this.writeFile = promisify(fs.writeFile);
 
-    this.mkdirp = require('util').promisify(require('mkdirp'));
+    this.mkdirp = promisify(require('mkdirp'));
 
     /* eslint-enable global-require */
 
@@ -30,13 +32,13 @@ class Extractor {
   }
 
   async execute() {
-    const { get, readDirectory, writeFile, readFile, base, codes, links, errors } = this;
-    const characters = readDirectory(base.scripts);
+    const { get, readDirectory, readFile, writeFile, base, codes, links, errors } = this;
+    const characters = await readDirectory(base.scripts);
     let { filesDownloaded, filesFound } = this;
 
     for (const character of characters) {
       const characterScripts = `${base.scripts}${character}/`;
-      const scripts = readDirectory(characterScripts);
+      const scripts = await readDirectory(characterScripts);
       const splitChar = character.split('_');
       const [type] = splitChar;
       let [, name] = splitChar;
@@ -58,7 +60,7 @@ class Extractor {
       links[id] = {};
 
       for (const script of scripts) {
-        const data = JSON.parse(readFile(`${characterScripts}${script}`));
+        const data = JSON.parse(await readFile(`${characterScripts}${script}`));
 
         const scenario = [];
         const chara = {};
@@ -122,6 +124,9 @@ class Extractor {
                 }
 
                 case 'bg': {
+                  if (line.storage.startsWith('white'))
+                    continue;
+
                   links['0000'].misc.push(base.url.bgImage + line.storage);
 
                   scenario.push({ bg: line.storage });
@@ -144,20 +149,21 @@ class Extractor {
                 case 'playse': {
                   const isGetIntro = ['h_get', 'h_intro'].some(i => line.storage.startsWith(i));
 
-                  if (isGetIntro)
+                  if (isGetIntro) {
                     links[id][resourceDirectory].push(
                       `${base.url.scenarios}${codes[type].intro}${resourceDirectory}/sound/${line.storage}`
                     );
 
-                  scenario.push({ voice: line.storage });
+                    scenario.push({ voice: line.storage });
+                  }
                   break;
                 }
 
-                case 'chara_hide': {
-                  scenario.push({ chara: null, words: null });
+                // case 'chara_hide': {
+                //   scenario.push({ chara: null, words: null });
 
-                  break;
-                }
+                //   break;
+                // }
               }
             } else {
               const text = entry
@@ -245,7 +251,7 @@ class Extractor {
         }
 
         await this.mkdirp(`${base.destination}${id}/${data.resource_directory}/`);
-        writeFile(`${base.destination}${id}/${data.resource_directory}/script.json`, JSON.stringify({ scenario }, null, 2));
+        await writeFile(`${base.destination}${id}/${data.resource_directory}/script.json`, JSON.stringify({ scenario }, null, 2));
       }
 
       for (const chara in links)
@@ -271,14 +277,14 @@ class Extractor {
               filesDownloaded++;
             } catch (f) {
               console.log('Error: ', f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.message, `-> ${chara} (${url})`);
-              errors.push(`${new Date().toLocaleString()}: [${type}: ${name} (${id})] ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
+              errors.push(`${new Date().toLocaleString()}: [${type}: ${name} (${id})]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
             }
           }
         }
     }
 
     if (errors.length)
-      writeFile(`${process.cwd()}/assets_download-error-stack.log`, errors.join('\r\n').replace(/\n/g, '\r\n'));
+      await writeFile(`${process.cwd()}/assets_download-error-stack.log`, errors.join('\r\n').replace(/\n/g, '\r\n'));
 
     return {
       message: [
