@@ -62,7 +62,7 @@ class Extractor {
       for (const script of scripts) {
         const data = JSON.parse(await readFile(`${characterScripts}${script}`));
 
-        const scenario = [];
+        let scenario = [];
         const chara = {};
 
         if (data.scenario) {
@@ -124,8 +124,9 @@ class Extractor {
                 }
 
                 case 'bg': {
-                  if (line.storage.startsWith('white'))
-                    continue;
+                  const irrBG = ['white', 'black', 'tomei'].some(i => line.storage.startsWith(i));
+
+                  if (irrBG) continue;
 
                   links['0000'].misc.push(base.url.bgImage + line.storage);
 
@@ -149,13 +150,13 @@ class Extractor {
                 case 'playse': {
                   const isGetIntro = ['h_get', 'h_intro'].some(i => line.storage.startsWith(i));
 
-                  if (isGetIntro) {
-                    links[id][resourceDirectory].push(
-                      `${base.url.scenarios}${codes[type].intro}${resourceDirectory}/sound/${line.storage}`
-                    );
+                  if (!isGetIntro) continue;
 
-                    scenario.push({ voice: line.storage });
-                  }
+                  links[id][resourceDirectory].push(
+                    `${base.url.scenarios}${codes[type].intro}${resourceDirectory}/sound/${line.storage}`
+                  );
+
+                  scenario.push({ voice: line.storage });
                   break;
                 }
 
@@ -169,13 +170,49 @@ class Extractor {
               const text = entry
                 .replace(/(["%])/g, '\\$&')
                 .replace(/\[l\]|\[r\]|\[cm\]|^;.+/g, '')
-                .replace(/(\.{1,3})(?=[^\s\W])/g, '$& ')
+                .replace(/(\.{1,3}|…)(?=[^\s\W])/g, '$& ')
                 .replace(/&nbsp;/gi, ' ');
               const invalidTalk = (text.replace(/ /g, '')).length < 2;
 
               if (invalidTalk) continue;
 
               scenario.push({ chara: name.replace(/&nbsp;/gi, ' '), words: text });
+            }
+          }
+
+          const tmp = scenario;
+          let sequence = {};
+          let lastBG = null;
+          let lastBGM = null;
+          scenario = [];
+
+          for (const entry of tmp) {
+            const key = Object.keys(entry)[0];
+
+            if (key === 'chara')
+              Object.assign(sequence, { chara: entry.chara, words: entry.words });
+            else {
+              Object.assign(sequence, { [key]: entry[key] });
+
+              if (key === 'bg')
+                lastBG = entry[key];
+
+              if (key === 'bgm')
+                lastBGM = entry[key];
+            }
+
+            if (!sequence.bg)
+              Object.assign(sequence, { bg: lastBG });
+
+            if (!sequence.bgm)
+              Object.assign(sequence, { bgm: lastBGM });
+
+            if (sequence.chara) {
+              scenario.push(sequence);
+
+              sequence = {};
+
+              continue;
             }
           }
         } else if (data.scene_data) {
@@ -272,12 +309,14 @@ class Extractor {
             try {
               const file = await fileInfo.download();
 
-              console.log('Downloaded Successfully -> ', file);
+              console.log('Downloaded Successfully -> ', chara, file);
 
               filesDownloaded++;
             } catch (f) {
               console.log('Error: ', f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.message, `-> ${chara} (${url})`);
-              errors.push(`${new Date().toLocaleString()}: [${type}: ${name} (${id})]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
+
+              if (f.code !== 'FEXIST')
+                errors.push(`${new Date().toLocaleString()}: [${type}: ${name} (${id})]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
             }
           }
         }
