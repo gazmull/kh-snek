@@ -6,8 +6,6 @@ class Extractor {
   constructor(options) {
     /* eslint-disable global-require */
 
-    this.get = require('snekfetch').get;
-
     this.readDirectory = promisify(fs.readdir);
 
     this.readFile = promisify(fs.readFile);
@@ -32,7 +30,7 @@ class Extractor {
   }
 
   async execute() {
-    const { get, readDirectory, readFile, writeFile, base, codes, links, errors } = this;
+    const { readDirectory, readFile, writeFile, base, codes, links, errors } = this;
     const characters = await readDirectory(base.scripts);
     let { filesDownloaded, filesFound } = this;
 
@@ -40,24 +38,10 @@ class Extractor {
       const characterScripts = `${base.scripts}${character}/`;
       const scripts = await readDirectory(characterScripts);
       const splitChar = character.split('_');
-      const [type] = splitChar;
-      let [, name] = splitChar;
-      let id = null;
-      let names = await get(`${base.url.api}search?name=${character.split('_').pop()}`);
-      names = names.body;
+      const [type, resName] = splitChar;
+      let name;
 
-      if (!names.length)
-        continue;
-
-      else if (names.length === 1)
-        id = names.shift().khID;
-
-      else
-        for (const i of names)
-          if (i.khName.toLowerCase() === name.toLowerCase())
-            id = i.khID;
-
-      links[id] = {};
+      links[resName] = {};
 
       for (const script of scripts) {
         const data = JSON.parse(await readFile(`${characterScripts}${script}`));
@@ -68,8 +52,8 @@ class Extractor {
         if (data.scenario) {
           const resourceDirectory = data.resource_directory;
 
-          if (!links[id][resourceDirectory])
-            links[id][resourceDirectory] = [];
+          if (!links[resName][resourceDirectory])
+            links[resName][resourceDirectory] = [];
 
           const entries = data.scenario.split('\n');
 
@@ -152,7 +136,7 @@ class Extractor {
 
                   if (!isGetIntro) continue;
 
-                  links[id][resourceDirectory].push(
+                  links[resName][resourceDirectory].push(
                     `${base.url.scenarios}${codes[type].intro}${resourceDirectory}/sound/${line.storage}`
                   );
 
@@ -218,14 +202,14 @@ class Extractor {
         } else if (data.scene_data) {
           const resourceDirectory = data.resource_directory;
 
-          if (!links[id].hasOwnProperty(resourceDirectory))
-            links[id][resourceDirectory] = [];
+          if (!links[resName].hasOwnProperty(resourceDirectory))
+            links[resName][resourceDirectory] = [];
 
           for (const entry of data.scene_data) {
             const entryData = {};
 
             if (entry.bgm) {
-              links[id][resourceDirectory].push(
+              links[resName][resourceDirectory].push(
                 `${base.url.scenarios}${codes[type].scene}${resourceDirectory}/${entry.bgm}`
               );
 
@@ -233,7 +217,7 @@ class Extractor {
             }
 
             if (entry.film) {
-              links[id][resourceDirectory].push(
+              links[resName][resourceDirectory].push(
                 `${base.url.scenarios}${codes[type].scene}${resourceDirectory}/${entry.film}`
               );
 
@@ -256,7 +240,7 @@ class Extractor {
               const talkEntry = {};
 
               if (line.voice) {
-                links[id][resourceDirectory].push(
+                links[resName][resourceDirectory].push(
                   `${base.url.scenarios}${codes[type].scene}${resourceDirectory}/${line.voice}`
                 );
 
@@ -287,8 +271,8 @@ class Extractor {
           }
         }
 
-        await this.mkdirp(`${base.destination}${id}/${data.resource_directory}/`);
-        await writeFile(`${base.destination}${id}/${data.resource_directory}/script.json`, JSON.stringify({ scenario }, null, 2));
+        await this.mkdirp(`${base.destination}${resName}/${data.resource_directory}/`);
+        await writeFile(`${base.destination}${resName}/${data.resource_directory}/script.json`, JSON.stringify({ scenario }, null, 2));
       }
 
       for (const chara in links)
@@ -316,7 +300,7 @@ class Extractor {
               console.log('Error: ', f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.message, `-> ${chara} (${url})`);
 
               if (f.code !== 'FEXIST')
-                errors.push(`${new Date().toLocaleString()}: [${type}: ${name} (${id})]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
+                errors.push(`${new Date().toLocaleString()}: [${type}: ${resName}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
             }
           }
         }
