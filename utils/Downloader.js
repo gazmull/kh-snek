@@ -57,16 +57,16 @@ class FileDownloader {
       ].join(' ')
     };
 
-    if (!url) throw new Error('No URL provided.');
-    else if (!destDirectory) throw new Error('No Destination Directory provided');
-    else if (!filename) throw new Error('No file name provided');
-    else if (await this.exists(destDirectory, filename)) throw new Error('File already exists');
+    if (!url) throw { code: 'NOURI', message: 'No URL provided.' };
+    else if (!destDirectory) throw { code: 'NODEST', message: 'No Destination Directory provided' };
+    else if (!filename) throw { code: 'NONAME', message: 'No file name provided' };
+    else if (await this.exists(destDirectory, filename)) throw { code: 'FEXIST', message: 'File already exists' };
 
     const data = await get(url, { headers });
     const file = data.body;
 
     if (!file || !data.ok)
-      throw new Error('Cannot obtain file from the URL');
+      throw { code: 'URINOTOK', message: 'Cannot obtain file from the URL' };
 
     await writeFile(path.join(destDirectory, filename), file, 'binary');
 
