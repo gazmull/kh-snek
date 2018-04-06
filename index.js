@@ -1,11 +1,10 @@
 const Extractor = require('./utils/Extractor');
-const { api: { url: apiURL }, directory: dir } = require('./auth');
+const { directory: dir } = require('./auth');
 const path = require('path');
 
 const destination = dir ? `${path.resolve(dir)}/` : `${process.cwd()}/static/scenarios/`;
 const scripts = `${destination}scripts/`;
 const url = {
-  api: apiURL,
   fgImage: 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/fgimage/',
   bgImage: 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/bgimage/',
   bgm: 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/bgm/',
@@ -41,8 +40,7 @@ async function start() {
     })
       .execute();
 
-    console
-      .log(message.join('\n'));
+    console.log(message.join('\n'));
   } catch (f) {
     console.log(f.stack);
   }

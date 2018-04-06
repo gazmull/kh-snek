@@ -12,8 +12,8 @@ class FileDownloader {
 
   /**
    * @typedef {Object} DownloaderOptions
-   * @property {string} url URL of the file.
-   * @property {string} destination Destination path of the file.
+   * @property {string|Buffer} url URL of the file.
+   * @property {string|PathLike} destination Destination path of the file.
    * @property {string} name File's name to save as.
    */
 
@@ -43,7 +43,7 @@ class FileDownloader {
 
   /**
    * Downloads the file.
-   * @returns {Promise.<filePath>} - path of the downloaded file.
+   * @returns {Promise.<FilePath>} - path of the downloaded file.
    */
   async download() {
     const url = this.options.url;
