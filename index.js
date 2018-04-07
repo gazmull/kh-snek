@@ -30,7 +30,7 @@ const codes = {
 
 async function start() {
   try {
-    const { message } = await new Extractor({
+    await new Extractor({
       base: {
         url,
         destination,
@@ -39,8 +39,6 @@ async function start() {
       codes
     })
       .execute();
-
-    console.log(message.join('\n'));
   } catch (f) {
     console.log(f.stack);
   }

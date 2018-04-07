@@ -1,26 +1,33 @@
 const Downloader = require('./Downloader');
 const fs = require('fs');
+const readline = require('readline');
 const { promisify } = require('util');
+
+const readDirectory = promisify(fs.readdir);
+const readFile = promisify(fs.readFile);
+const writeFile = promisify(fs.writeFile);
+const mkdirp = promisify(require('mkdirp'));
 
 class Extractor {
   constructor(options) {
-    /* eslint-disable global-require */
-
-    this.readDirectory = promisify(fs.readdir);
-
-    this.readFile = promisify(fs.readFile);
-
-    this.writeFile = promisify(fs.writeFile);
-
-    this.mkdirp = promisify(require('mkdirp'));
-
-    /* eslint-enable global-require */
-
     this.base = options.base;
 
     this.codes = options.codes;
 
+    this.characters = {
+      soul: [],
+      eidolon: [],
+      ssra: [],
+      ssr: [],
+      sr: [],
+      r: []
+    };
+
     this.links = { '0000': { misc: [] } };
+
+    this.charactersExtracted = 0;
+
+    this.charactersFound = 0;
 
     this.filesDownloaded = 0;
 
@@ -30,30 +37,117 @@ class Extractor {
   }
 
   async execute() {
-    const { readDirectory, readFile, writeFile, base, codes, links, errors } = this;
-    const characters = await readDirectory(base.scripts);
-    let { filesDownloaded, filesFound } = this;
+    const categories = await readDirectory(this.base.scripts);
+
+    for (const category of categories) {
+      const charactersDir = `${this.base.scripts}${category}/`;
+      const characters = await readDirectory(charactersDir);
+      this.charactersFound += characters.length;
+      this.charactersExtracted += await this.extract(charactersDir, characters);
+
+      await writeFile(`${this.base.destination}/config.json`, JSON.stringify(this.characters, null, 2));
+      await this.download(category);
+    }
+
+    if (this.errors.length)
+      await writeFile(`${process.cwd()}/assets_download-error-stack.log`, this.errors.join('\r\n').replace(/\n/g, '\n'));
+
+    this.progress([
+      `Extracted ${this.charactersExtracted} characters. (Expected: ${this.charactersFound})`,
+      `Downloaded ${this.filesDownloaded} files. (Expected: ${this.filesFound})`,
+      this.errors.length
+        ? 'I have detected some errors during the process. Error log can be found at assets_download-error-stack.log.'
+        : ''
+    ]);
+
+    return true;
+  }
+
+  async download(category) {
+    for (const chara in this.links)
+      for (let resourceDirectory in this.links[chara]) {
+        const resourceID = resourceDirectory;
+        resourceDirectory = this.links[chara][resourceDirectory];
+        this.filesFound += resourceDirectory.length;
+
+        for (const url of resourceDirectory) {
+          if (!url) continue;
+
+          const fileInfo = new Downloader({
+            url,
+            destination: `${this.base.destination}${chara}/${resourceID}/`,
+            name: url.split('/').pop()
+          });
+
+          try {
+            const file = await fileInfo.download();
+
+            this.progress(`Downloaded Successfully -> ${chara} ${file}`);
+
+            this.filesDownloaded++;
+          } catch (f) {
+            this.progress(`Error: ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.message} -> ${chara} (${url})`);
+
+            if (f.code !== 'FEXIST')
+              this.errors.push(`${new Date().toLocaleString()}: [${category}: ${chara}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
+          }
+        }
+      }
+  }
+
+  async extract(dir, characters) {
+    const type = dir.split('/').slice(-2).shift();
+    let name;
 
     for (const character of characters) {
-      const characterScripts = `${base.scripts}${character}/`;
-      const scripts = await readDirectory(characterScripts);
-      const splitChar = character.split('_');
-      const [type, resName] = splitChar;
-      let name;
+      let scripts = await readDirectory(`${dir}/${character}/`);
 
-      links[resName] = {};
+      scripts = scripts.sort((a, b) => {
+        const x = parseInt(a.split('_').shift());
+        const y = parseInt(b.split('_').shift());
+
+        return x - y;
+      });
+
+      this.links[character] = {};
+
+      this.progress(`Extracting  ${character}...`);
+      this.characters[type].push({
+        name: character,
+        intro: { title: null, resource: null },
+        harem1: { title: null, resource: null, resource2: null },
+        harem2: { title: null, resource: null, resource2: null }
+      });
 
       for (const script of scripts) {
-        const data = JSON.parse(await readFile(`${characterScripts}${script}`));
+        const data = JSON.parse(await readFile(`${dir}/${character}/${script}`));
+
+        if (!(data.scenario || data.scene_data)) continue;
 
         let scenario = [];
         const chara = {};
+        const scriptIndex = scripts.indexOf(script);
+        const charIndex = () => this.characters[type].findIndex(i => i.name === character);
+        const superType = ['ssra', 'ssr', 'sr', 'r'].includes(type) ? 'kamihime' : type;
 
         if (data.scenario) {
           const resourceDirectory = data.resource_directory;
 
-          if (!links[resName][resourceDirectory])
-            links[resName][resourceDirectory] = [];
+          if (!this.links[character][resourceDirectory])
+            this.links[character][resourceDirectory] = [];
+
+          if ([0, 1, 3].includes(scriptIndex))
+            Object.assign(this.characters[type][charIndex()], {
+              [scriptIndex === 0
+                ? 'intro'
+                : scriptIndex === 1
+                  ? 'harem1'
+                  : 'harem2'
+              ]: {
+                title: data.title,
+                resource: resourceDirectory
+              }
+            });
 
           const entries = data.scenario.split('\n');
 
@@ -81,29 +175,24 @@ class Extractor {
 
               switch (line.command) {
                 case 'chara_new': {
-                  links['0000'].misc.push(base.url.fgImage + line.storage);
-
+                  this.links['0000'].misc.push(this.base.url.fgImage + line.storage);
                   Object.assign(chara, { [line.name]: { name: line.jname } });
-
                   break;
                 }
 
                 case 'chara_face': {
-                  links['0000'].misc.push(base.url.fgImage + line.storage);
+                  this.links['0000'].misc.push(this.base.url.fgImage + line.storage);
 
                   if (!chara[line.name].face)
                     Object.assign(charaName, { face: {} });
 
                   Object.assign(charaName.face, { [line.face]: line.storage });
-
                   break;
                 }
 
                 case 'playbgm': {
-                  links['0000'].misc.push(base.url.bgm + line.storage);
-
+                  this.links['0000'].misc.push(this.base.url.bgm + line.storage);
                   scenario.push({ bgm: line.storage });
-
                   break;
                 }
 
@@ -112,22 +201,18 @@ class Extractor {
 
                   if (irrBG) continue;
 
-                  links['0000'].misc.push(base.url.bgImage + line.storage);
-
+                  this.links['0000'].misc.push(this.base.url.bgImage + line.storage);
                   scenario.push({ bg: line.storage });
-
                   break;
                 }
 
                 case 'chara_show': {
                   name = charaName.name;
-
                   break;
                 }
 
                 case 'chara_mod': {
                   scenario.push({ expression: charaName.face[line.face] });
-
                   break;
                 }
 
@@ -136,19 +221,12 @@ class Extractor {
 
                   if (!isGetIntro) continue;
 
-                  links[resName][resourceDirectory].push(
-                    `${base.url.scenarios}${codes[type].intro}${resourceDirectory}/sound/${line.storage}`
+                  this.links[character][resourceDirectory].push(
+                    `${this.base.url.scenarios}${this.codes[superType].intro}${resourceDirectory}/sound/${line.storage}`
                   );
-
                   scenario.push({ voice: line.storage });
                   break;
                 }
-
-                // case 'chara_hide': {
-                //   scenario.push({ chara: null, words: null });
-
-                //   break;
-                // }
               }
             } else {
               const text = entry
@@ -195,30 +273,36 @@ class Extractor {
               scenario.push(sequence);
 
               sequence = {};
-
               continue;
             }
           }
-        } else if (data.scene_data) {
+        } else {
           const resourceDirectory = data.resource_directory;
 
-          if (!links[resName].hasOwnProperty(resourceDirectory))
-            links[resName][resourceDirectory] = [];
+          if ([2, 4].includes(scriptIndex))
+            Object.assign(this.characters[type][charIndex()][
+              scriptIndex === 2
+                ? 'harem1'
+                : 'harem2'
+            ], { resource2: resourceDirectory });
+
+          if (!this.links[character].hasOwnProperty(resourceDirectory))
+            this.links[character][resourceDirectory] = [];
 
           for (const entry of data.scene_data) {
             const entryData = {};
 
             if (entry.bgm) {
-              links[resName][resourceDirectory].push(
-                `${base.url.scenarios}${codes[type].scene}${resourceDirectory}/${entry.bgm}`
+              this.links[character][resourceDirectory].push(
+                `${this.base.url.scenarios}${this.codes[superType].scene}${resourceDirectory}/${entry.bgm}`
               );
 
               Object.assign(entryData, { bgm: entry.bgm });
             }
 
             if (entry.film) {
-              links[resName][resourceDirectory].push(
-                `${base.url.scenarios}${codes[type].scene}${resourceDirectory}/${entry.film}`
+              this.links[character][resourceDirectory].push(
+                `${this.base.url.scenarios}${this.codes[superType].scene}${resourceDirectory}/${entry.film}`
               );
 
               const fps = Number(entry.fps);
@@ -240,8 +324,8 @@ class Extractor {
               const talkEntry = {};
 
               if (line.voice) {
-                links[resName][resourceDirectory].push(
-                  `${base.url.scenarios}${codes[type].scene}${resourceDirectory}/${line.voice}`
+                this.links[character][resourceDirectory].push(
+                  `${this.base.url.scenarios}${this.codes[superType].scene}${resourceDirectory}/${line.voice}`
                 );
 
                 if (line.voice.length)
@@ -271,53 +355,21 @@ class Extractor {
           }
         }
 
-        await this.mkdirp(`${base.destination}${resName}/${data.resource_directory}/`);
-        await writeFile(`${base.destination}${resName}/${data.resource_directory}/script.json`, JSON.stringify({ scenario }, null, 2));
+        await mkdirp(`${this.base.destination}${character}/${data.resource_directory}/`);
+        await writeFile(`${this.base.destination}${character}/${data.resource_directory}/script.json`, JSON.stringify({ scenario }, null, 2));
       }
 
-      for (const chara in links)
-        for (let resourceDirectory in links[chara]) {
-          const resourceID = resourceDirectory;
-          resourceDirectory = links[chara][resourceDirectory];
-          filesFound += resourceDirectory.length;
-
-          for (const url of resourceDirectory) {
-            if (!url) continue;
-
-            const fileInfo = new Downloader({
-              url,
-              destination: `${base.destination}${chara}/${resourceID}/`,
-              name: url.split('/').pop()
-            });
-
-            try {
-              const file = await fileInfo.download();
-
-              console.log('Downloaded Successfully -> ', chara, file);
-
-              filesDownloaded++;
-            } catch (f) {
-              console.log('Error: ', f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.message, `-> ${chara} (${url})`);
-
-              if (f.code !== 'FEXIST')
-                errors.push(`${new Date().toLocaleString()}: [${type}: ${resName}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
-            }
-          }
-        }
+      this.progress(`Extracted ${character}`);
     }
 
-    if (errors.length)
-      await writeFile(`${process.cwd()}/assets_download-error-stack.log`, errors.join('\r\n').replace(/\n/g, '\r\n'));
+    return this.characters[type].length;
+  }
 
-    return {
-      message: [
-        `Extracted ${Object.keys(links).length - 1} characters. (Expected: ${characters.length})`,
-        `Downloaded ${filesDownloaded} files. (Expected: ${filesFound})`,
-        errors.length
-          ? 'I have detected some errors during the process. Error log can be found at assets_download-error-stack.log.'
-          : ''
-      ]
-    };
+  progress(message) {
+    readline.clearLine(process.stdout, 0);
+    readline.cursorTo(process.stdout, 0, null);
+
+    return process.stdout.write(Array.isArray(message) ? message.join('\n') : message);
   }
 }
 
