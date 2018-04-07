@@ -45,9 +45,10 @@ class Extractor {
       this.charactersFound += characters.length;
       this.charactersExtracted += await this.extract(charactersDir, characters);
 
-      await writeFile(`${this.base.destination}/config.json`, JSON.stringify(this.characters, null, 2));
       await this.download(category);
     }
+
+    await writeFile(`${this.base.destination}/config.json`, JSON.stringify(this.characters, null, 2));
 
     if (this.errors.length)
       await writeFile(`${process.cwd()}/assets_download-error-stack.log`, this.errors.join('\r\n').replace(/\n/g, '\n'));
