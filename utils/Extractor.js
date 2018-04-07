@@ -64,35 +64,42 @@ class Extractor {
   }
 
   async download(category) {
-    for (const chara in this.links)
+    for (const chara in this.links) {
       for (let resourceDirectory in this.links[chara]) {
         const resourceID = resourceDirectory;
         resourceDirectory = this.links[chara][resourceDirectory];
+        const resLength = resourceDirectory.length;
         this.filesFound += resourceDirectory.length;
 
         for (const url of resourceDirectory) {
           if (!url) continue;
 
+          const urlIndex = resourceDirectory.indexOf(url);
+          const name = url.split('/').pop();
           const fileInfo = new Downloader({
             url,
             destination: `${this.base.destination}${chara}/${resourceID}/`,
-            name: url.split('/').pop()
+            name
           });
 
-          try {
-            const file = await fileInfo.download();
+          this.progress(`Downloading ${chara}... [${urlIndex} / ${resLength}]`);
 
-            this.progress(`Downloaded Successfully -> ${chara} ${file}`);
+          try {
+            await fileInfo.download();
 
             this.filesDownloaded++;
           } catch (f) {
-            this.progress(`Error: ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.message} -> ${chara} (${url})`);
+            this.progress(`Error [${chara} (${name})]: ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.message}`);
+            this.progress(`Downloading ${chara}... [${urlIndex} / ${resLength}]`);
 
             if (f.code !== 'FEXIST')
               this.errors.push(`${new Date().toLocaleString()}: [${category}: ${chara}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
           }
         }
       }
+
+      this.progress(`Downloaded ${chara}`);
+    }
   }
 
   async extract(dir, characters) {
