@@ -65,7 +65,7 @@ class Extractor {
   }
 
   async download(category) {
-    for (const chara in this.links) {
+    for (const chara in this.links)
       for (let resourceDirectory in this.links[chara]) {
         const resourceID = resourceDirectory;
         resourceDirectory = this.links[chara][resourceDirectory];
@@ -90,17 +90,11 @@ class Extractor {
 
             this.filesDownloaded++;
           } catch (f) {
-            this.progress(`Error [${chara} (${name})]: ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.message}`);
-            this.progress(`Downloading ${chara}... [${urlIndex} / ${resLength}]`);
-
             if (f.code !== 'FEXIST')
               this.errors.push(`${new Date().toLocaleString()}: [${category}: ${chara}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
           }
         }
       }
-
-      this.progress(`Downloaded ${chara}`);
-    }
   }
 
   async extract(dir, characters) {
@@ -122,9 +116,9 @@ class Extractor {
       this.progress(`Extracting  ${character}...`);
       this.characters[type].push({
         name: character,
-        intro: { title: null, resource: null },
-        harem1: { title: null, resource: null, resource2: null },
-        harem2: { title: null, resource: null, resource2: null }
+        intro: { title: null, summary: null, resource: null },
+        harem1: { title: null, summary: null, resource: null, resource2: null },
+        harem2: { title: null, summary: null, resource: null, resource2: null }
       });
 
       for (const script of scripts) {
@@ -153,6 +147,7 @@ class Extractor {
                   : 'harem2'
               ]: {
                 title: data.title,
+                summary: data.summary,
                 resource: resourceDirectory
               }
             });

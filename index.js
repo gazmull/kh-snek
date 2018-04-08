@@ -3,7 +3,7 @@ const { directory: dir } = require('./auth');
 const path = require('path');
 
 const destination = dir ? `${path.resolve(dir)}/` : `${process.cwd()}/static/scenarios/`;
-const scripts = `${destination}scripts/`;
+const scripts = `${destination}../scripts/`;
 const url = {
   fgImage: 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/fgimage/',
   bgImage: 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/bgimage/',

@@ -9,7 +9,7 @@ This is the Node.JS port of Eliont's Builder Script ([Kamihime Player Offline](h
 * `$ git clone -b scripts-offline --single-branch https://github.com/gazmull/kh-snek.git`
 * `$ cd kh-snek`
 * `$ npm install`
-* Paste harem files to `static/scenarios/scripts`.
+* Paste harem files to `static/scripts`.
   * **Your `scripts` folder shall be structured according to:**
     * Take note that `ssra` / `ssr` / `sr` / `r` folder shall contain `Kamihime`-type characters only. Nothing else.
     <pre>+-- scripts
@@ -22,10 +22,20 @@ This is the Node.JS port of Eliont's Builder Script ([Kamihime Player Offline](h
     * Then paste the character folders according to their type / rarity (Kamihime-type only).
   * Folder of each character shall be named according to their proper name.
     * Example: `Susanoo [Awakened]` and `[Apostle of Light] Satan`; structure:
-      <pre>+-- Susanoo [Awakened]
-      | -- 638_harem-character
-      | -- 639_harem-character
-      | -- 640_harem-character
+    * ***Please***, let the files stay as they were downloaded without modifying their name.
+      <pre>+-- scripts
+      |  +-- ssra
+      |  |  +-- Susanoo [Awakened]
+      |  |  |  -- 638_harem-character
+      |  |  |  -- 639_harem-character
+      |  |  |  -- 640_harem-character
+      |  +-- ssr
+      |  |  +-- [Apostle of Light] Satan
+      |  |  |  -- 524_harem-character
+      |  |  |  -- 525_harem-character
+      |  |  |  -- 526_harem-character
+      |  |  |  -- 527_harem-character
+      |  |  |  -- 528_harem-character
       </pre>
 * Configure `auth.js`. Take the template from `auth.example.js`
 * `$ node .`
