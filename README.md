@@ -9,7 +9,7 @@ This is the Node.JS port of Eliont's Builder Script ([Kamihime Player Offline](h
 * `$ git clone -b scripts-offline --single-branch https://github.com/gazmull/kh-snek.git`
 * `$ cd kh-snek`
 * `$ npm install`
-* Paste harem files to `static/scripts`.
+* Paste harem files to `kamihime-player/src/static/scripts`.
   * **Your `scripts` folder shall be structured according to:**
     * Take note that `ssra` / `ssr` / `sr` / `r` folder shall contain `Kamihime`-type characters only. Nothing else.
     <pre>+-- scripts

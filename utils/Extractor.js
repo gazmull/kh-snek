@@ -221,11 +221,12 @@ class Extractor {
 
                 case 'playse': {
                   const isGetIntro = ['h_get', 'h_intro'].some(i => line.storage.startsWith(i));
+                  const asGet = line.storage.startsWith('h_get');
 
                   if (!isGetIntro) continue;
 
                   this.links[character][resourceDirectory].push(
-                    `${this.base.url.scenarios}${this.codes[superType].intro}${resourceDirectory}/sound/${line.storage}`
+                    `${this.base.url.scenarios}${this.codes[superType][asGet ? 'get' : 'intro']}${resourceDirectory}/sound/${line.storage}`
                   );
                   scenario.push({ voice: line.storage });
                   break;

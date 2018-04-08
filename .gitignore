@@ -12,3 +12,6 @@ auth.js
 
 # Tests
 assets_download-error-stack.log
+
+# Windows
+Builder.bat

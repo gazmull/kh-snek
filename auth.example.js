@@ -1,1 +1,1 @@
-module.exports = { directory: '../kamihime-database/static/scenarios/' };
+module.exports = { directory: '../kamihime-player/src/static/scenarios/' };
