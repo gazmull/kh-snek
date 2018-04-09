@@ -44,10 +44,9 @@ class Extractor {
       const characters = await readDirectory(charactersDir);
       this.charactersFound += characters.length;
       this.charactersExtracted += await this.extract(charactersDir, characters);
-
-      await this.download(category);
     }
 
+    await this.download();
     await writeFile(`${this.base.destination}/config.json`, JSON.stringify(this.characters, null, 2));
 
     if (this.errors.length)
@@ -64,7 +63,7 @@ class Extractor {
     return true;
   }
 
-  async download(category) {
+  async download() {
     for (const chara in this.links)
       for (let resourceDirectory in this.links[chara]) {
         const resourceID = resourceDirectory;
@@ -91,7 +90,7 @@ class Extractor {
             this.filesDownloaded++;
           } catch (f) {
             if (f.code !== 'FEXIST')
-              this.errors.push(`${new Date().toLocaleString()}: [${category}: ${chara}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
+              this.errors.push(`${new Date().toLocaleString()}: [${chara}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
           }
         }
       }
@@ -221,14 +220,19 @@ class Extractor {
 
                 case 'playse': {
                   const isGetIntro = ['h_get', 'h_intro'].some(i => line.storage.startsWith(i));
-                  const asGet = line.storage.startsWith('h_get');
 
                   if (!isGetIntro) continue;
 
                   this.links[character][resourceDirectory].push(
-                    `${this.base.url.scenarios}${this.codes[superType][asGet ? 'get' : 'intro']}${resourceDirectory}/sound/${line.storage}`
+                    `${this.base.url.scenarios}${this.codes[superType].intro}${resourceDirectory}/sound/${line.storage}`,
+                    `${this.base.url.scenarios}${this.codes[superType].get}${resourceDirectory}/sound/${line.storage}`
                   );
                   scenario.push({ voice: line.storage });
+                  break;
+                }
+
+                case 'chara_hide': {
+                  name = ' ';
                   break;
                 }
               }
