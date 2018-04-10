@@ -2,7 +2,7 @@ const Extractor = require('./utils/Extractor');
 const { directory: dir } = require('./auth');
 const path = require('path');
 
-const destination = dir ? `${path.resolve(dir)}/` : `${process.cwd()}/static/scenarios/`;
+const destination = dir ? `${path.resolve(dir)}/` : `${__dirname}/static/scenarios/`;
 const scripts = `${destination}../scripts/`;
 const url = {
   fgImage: 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/fgimage/',
