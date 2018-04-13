@@ -126,6 +126,7 @@ class Extractor {
         if (!(data.scenario || data.scene_data)) continue;
 
         let scenario = [];
+        let model = {};
         const chara = {};
         const scriptIndex = scripts.indexOf(script);
         const charIndex = () => this.characters[type].findIndex(i => i.name === character);
@@ -278,6 +279,9 @@ class Extractor {
               Object.assign(sequence, { bgm: lastBGM });
 
             if (sequence.chara) {
+              if (new RegExp(sequence.chara.replace(/([[\]()?])/g, '\\$&')).test(character) && !Object.keys(model).length)
+                Object.assign(model, { [sequence.chara]: sequence.expression });
+
               scenario.push(sequence);
 
               sequence = {};
@@ -364,7 +368,9 @@ class Extractor {
         }
 
         await mkdirp(`${this.base.destination}${character}/${data.resource_directory}/`);
-        await writeFile(`${this.base.destination}${character}/${data.resource_directory}/script.json`, JSON.stringify({ scenario }, null, 2));
+        await writeFile(`${this.base.destination}${character}/${data.resource_directory}/script.json`, JSON.stringify({ scenario, model }, null, 2));
+
+        model = {};
       }
 
       this.progress(`Extracted ${character}`);
