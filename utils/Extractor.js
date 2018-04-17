@@ -49,7 +49,7 @@ class Extractor {
     }
 
     if (await Downloader.exists(process.cwd(), 'blacklist.array'))
-      this.blacklist = Buffer.from(await readFile(`${process.cwd()}/blacklist.array`)).toString('utf8').split('\n');
+      this.blacklist = (await readFile(`${process.cwd()}/blacklist.array`, 'utf8')).split('\n');
 
     await this.download();
     await writeFile(`${this.base.destination}/config.json`, JSON.stringify(this.characters, null, 2));
