@@ -12,6 +12,7 @@ auth.js
 
 # Tests
 assets_download-error-stack.log
+blacklist.array
 
 # Windows
 Builder.bat

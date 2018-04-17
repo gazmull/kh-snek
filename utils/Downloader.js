@@ -26,7 +26,7 @@ class FileDownloader {
     this.options = options;
   }
 
-  async exists(filepath, filename) {
+  static async exists(filepath, filename) {
     try {
       await mkdir(filepath);
       try {
@@ -60,7 +60,7 @@ class FileDownloader {
     if (!url) throw { code: 'NOURI', message: 'No URL provided.' };
     else if (!destDirectory) throw { code: 'NODEST', message: 'No Destination Directory provided' };
     else if (!filename) throw { code: 'NONAME', message: 'No file name provided' };
-    else if (await this.exists(destDirectory, filename)) throw { code: 'FEXIST', message: 'File already exists' };
+    else if (await FileDownloader.exists(destDirectory, filename)) throw { code: 'FEXIST', message: 'File already exists' };
 
     const data = await get(url, { headers });
     const file = data.body;

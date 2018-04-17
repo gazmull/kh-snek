@@ -25,6 +25,8 @@ class Extractor {
 
     this.links = { '0000': { misc: [] } };
 
+    this.blacklist = [];
+
     this.charactersExtracted = 0;
 
     this.charactersFound = 0;
@@ -46,11 +48,17 @@ class Extractor {
       this.charactersExtracted += await this.extract(charactersDir, characters);
     }
 
+    if (await Downloader.exists(process.cwd(), 'blacklist.array'))
+      this.blacklist = Buffer.from(await readFile(`${process.cwd()}/blacklist.array`)).toString('utf8').split('\n');
+
     await this.download();
     await writeFile(`${this.base.destination}/config.json`, JSON.stringify(this.characters, null, 2));
 
     if (this.errors.length)
       await writeFile(`${process.cwd()}/assets_download-error-stack.log`, this.errors.join('\r\n').replace(/\n/g, '\n'));
+
+    if (this.blacklist.length)
+      await writeFile(`${process.cwd()}/blacklist.array`, this.blacklist.join('\n'));
 
     this.progress([
       `Extracted ${this.charactersExtracted} characters. (Expected: ${this.charactersFound})`,
@@ -73,6 +81,7 @@ class Extractor {
 
         for (const url of resourceDirectory) {
           if (!url) continue;
+          else if (this.blacklist.includes(url)) continue;
 
           const urlIndex = resourceDirectory.indexOf(url);
           const name = url.split('/').pop();
@@ -91,6 +100,9 @@ class Extractor {
           } catch (f) {
             if (f.code !== 'FEXIST')
               this.errors.push(`${new Date().toLocaleString()}: [${chara}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
+
+            if (f.status === 404)
+              this.blacklist.push(url);
           }
         }
       }
@@ -225,8 +237,9 @@ class Extractor {
                   if (!isGetIntro) continue;
 
                   this.links[character][resourceDirectory].push(
-                    `${this.base.url.scenarios}${this.codes[superType].intro}${resourceDirectory}/sound/${line.storage}`,
-                    `${this.base.url.scenarios}${this.codes[superType].get}${resourceDirectory}/sound/${line.storage}`
+                    superType === 'soul'
+                      ? `${this.base.url.scenarios}${this.codes[superType].get}${resourceDirectory}/sound/${line.storage}`
+                      : `${this.base.url.scenarios}${this.codes[superType].intro}${resourceDirectory}/sound/${line.storage}`
                   );
                   scenario.push({ voice: line.storage });
                   break;
