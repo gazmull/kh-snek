@@ -48,11 +48,12 @@ class Extractor {
       this.charactersExtracted += await this.extract(charactersDir, characters);
     }
 
+    await writeFile(`${this.base.destination}/config.json`, JSON.stringify(this.characters, null, 2));
+
     if (await Downloader.exists(process.cwd(), 'blacklist.array'))
       this.blacklist = (await readFile(`${process.cwd()}/blacklist.array`, 'utf8')).split('\n');
 
     await this.download();
-    await writeFile(`${this.base.destination}/config.json`, JSON.stringify(this.characters, null, 2));
 
     if (this.errors.length)
       await writeFile(`${process.cwd()}/assets_download-error-stack.log`, this.errors.join('\r\n').replace(/\n/g, '\n'));
@@ -383,6 +384,9 @@ class Extractor {
 
         await mkdirp(`${this.base.destination}${character}/${data.resource_directory}/`);
         await writeFile(`${this.base.destination}${character}/${data.resource_directory}/script.json`, JSON.stringify({ scenario, model }, null, 2));
+
+        if (!this.characters[type][charIndex()].model)
+          Object.assign(this.characters[type][charIndex()], { model: model[Object.keys(model)[0]] });
       }
 
       this.progress(`Extracted ${character}`);
