@@ -385,7 +385,7 @@ class Extractor {
         await mkdirp(`${this.base.destination}${character}/${data.resource_directory}/`);
         await writeFile(`${this.base.destination}${character}/${data.resource_directory}/script.json`, JSON.stringify({ scenario, model }, null, 2));
 
-        if (!this.characters[type][charIndex()].model)
+        if (!this.characters[type][charIndex()].model && scriptIndex === 1)
           Object.assign(this.characters[type][charIndex()], { model: model[Object.keys(model)[0]] });
       }
 
