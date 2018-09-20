@@ -43,9 +43,10 @@ class FileDownloader {
 
   /**
    * Downloads the file.
-   * @returns {Promise.<FilePath>} - path of the downloaded file.
+   * @param {boolean} returnData Immediately return the raw data instead.
+   * @returns {Promise<FilePath|Buffer>} - path of the downloaded file; if returnData, returns Buffer.
    */
-  async download() {
+  async download(returnData = false) {
     const url = this.options.url;
     const destDirectory = this.options.destination;
     const filename = this.options.name;
@@ -58,15 +59,20 @@ class FileDownloader {
     };
 
     if (!url) throw { code: 'NOURI', message: 'No URL provided.' };
-    else if (!destDirectory) throw { code: 'NODEST', message: 'No Destination Directory provided' };
-    else if (!filename) throw { code: 'NONAME', message: 'No file name provided' };
-    else if (await FileDownloader.exists(destDirectory, filename)) throw { code: 'FEXIST', message: 'File already exists' };
+
+    if (!returnData)
+      if (!destDirectory) throw { code: 'NODEST', message: 'No Destination Directory provided' };
+      else if (!filename) throw { code: 'NONAME', message: 'No file name provided' };
+      else if (await FileDownloader.exists(destDirectory, filename)) throw { code: 'FEXIST', message: 'File already exists' };
 
     const data = await get(url, { headers });
     const file = data.body;
 
     if (!file || !data.ok)
       throw { code: 'URINOTOK', message: 'Cannot obtain file from the URL' };
+
+    if (returnData)
+      return file;
 
     await writeFile(path.join(destDirectory, filename), file, 'binary');
 
