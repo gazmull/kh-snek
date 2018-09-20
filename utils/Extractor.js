@@ -353,7 +353,7 @@ class Extractor {
 
         if (invalidTalk) continue;
 
-        this._scenario.push({ chara: name.replace(/&nbsp;/gi, ' '), words: text });
+        this._scenario.push({ chara: name ? name.replace(/&nbsp;/gi, ' ') : name, words: text });
       }
     }
 
