@@ -104,7 +104,7 @@ class Extractor {
             this.filesDownloaded++;
           } catch (f) {
             if (f.code !== 'FEXIST')
-              this.errors.push(`${new Date().toLocaleString()}: [${chara}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'Outdated script. Please get a new one!' : f.stack}`);
+              this.errors.push(`${new Date().toLocaleString()}: [${chara}]\n  ${url}\n  ${f.code === 'ENOENT' ? 'I cannot read/write files into this directory!' : f.stack}`);
 
             if (f.status === 404)
               this.blacklist.push(url);
