@@ -1,11 +1,13 @@
 language: node_js
 node_js:
-  - "9"
-install: npm install
+  - 12
+  - 10
+before_install: cp auth.example.js auth.js
+install: yarn
 jobs:
   include:
     - stage: test
-      script: npm test
+      script: yarn test
 cache:
   directories:
     - node_modules

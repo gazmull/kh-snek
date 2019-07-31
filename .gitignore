@@ -1,8 +1,9 @@
 # Package Managers
 node_modules
 package-lock.json
-yarn.lock
 
 #Private Credentials
-static
+scenarios
 auth.js
+logs
+dist
