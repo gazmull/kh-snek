@@ -1,13 +1,4 @@
 /**
- * @property address The machine's external IP Address
- * @property port The port where the server is listening
- */
-export interface Host {
-  address: string;
-  port?: number;
-}
-
-/**
  * @property gist The Github Gist ID.
  * @property token The Github user's personal access token.
  */
@@ -17,10 +8,26 @@ export interface Github {
 }
 
 /**
+ * Configuration for Kamihime PROJECT user's information.
+ *
+ * This is used for logging into the game to extract all episodes.
+ * Please make sure to avoid using the game while doing this to avoid being blocked from the game.
+ *
+ * Get your credentials via `Site Information` -> `Cookies` -> Expand `cf.r.kamihimeproject.dmmgames.com`
  * @property session The user's Session value.
  * @property xsrf The user's XSRF Token value.
  */
 export type KamihimeGrant = {
   session: string;
   xsrf: string;
+}
+
+/**
+ * Configuration for remote directories (Writing assets to your server).
+ * @property scenarios Where to write the usual episode assets.
+ * @property zips Where to write zipped animated episode scenario images.
+ */
+export type Directories = {
+  scenarios: string;
+  zips: string;
 }

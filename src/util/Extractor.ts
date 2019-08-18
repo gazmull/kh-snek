@@ -1,11 +1,19 @@
-import * as fs from 'fs-extra';
+import Zip from 'jszip';
 import * as Knex from 'knex';
 import fetch from 'node-fetch';
+import SSH2Promise from 'ssh2-promise';
+import SFTP from 'ssh2-promise/dist/sftp'; // Need to fork this to update wrong types
 import { Logger } from 'winston';
 import { IExtractorFiles, IExtractorOptions, IScenarioSequence } from '../../typings';
+import Downloader from './Downloader';
 import GithubGist from './GithubGist';
+import ImageProcessor from './ImageProcessor';
 
 const formatErr = (message: string) => `${new Date().toLocaleString()}: ${message}`;
+// tslint:disable-next-line:no-var-requires
+const ssh = new SSH2Promise(require('../../auth').ssh);
+let sftp: SFTP;
+const convert = new ImageProcessor();
 
 const headers = {
   'User-Agent': [
@@ -26,6 +34,8 @@ export default class Extractor {
 
     this.files = {};
 
+    this.miscFiles = [];
+
     this.blacklist = [];
 
     this.resourcesExtracted = 0;
@@ -34,9 +44,7 @@ export default class Extractor {
 
     this.filesFound = 0;
 
-    this.errors = [];
-
-    this.verbose = process.argv.includes('--verbose');
+    this.error = false;
 
     headers.Cookie = `XSRF-TOKEN=${options.grant.xsrf};session=${options.grant.session}`;
   }
@@ -44,22 +52,34 @@ export default class Extractor {
   public base: IExtractorOptions['base'];
   public db: Knex;
   public files: IExtractorFiles;
+  public miscFiles: string[];
   public blacklist: string[];
   public resourcesExtracted: number;
   public resourcesFound: number;
   public filesFound: number;
-  public errors: string[];
+  public error: boolean;
   public logger: Logger;
   public verbose: boolean;
 
   public async exec () {
-    for (const character of this.base.CHARACTERS) {
-      const { id } = character;
+    try {
+      this.logger.info('Connecting to remote server via SSH...');
+      await ssh.connect();
+      sftp = ssh.sftp();
+
+      this.logger.info('Connected to remote server via SSH.');
+    } catch (err) { throw new Error(err); }
+
+    for (const character of this.base.characters) {
+      const { id, name } = character;
 
       if (!this.files[id])
-        this.files[id] = {};
+        this.files[id] = {
+          name,
+          resources: {}
+        };
 
-      if (this.verbose) this.logger.info(`Obtaining episodes for ${id}...`);
+      this.logger.info(`Obtaining episodes for ${id}...`);
 
       const resources = await this._getEpisodes(id);
       this.resourcesFound += resources.length;
@@ -70,20 +90,14 @@ export default class Extractor {
 
     await this._download();
 
-    if (this.errors.length)
-      await fs.outputFile(
-        process.cwd() + '/scenarios-error.log',
-        this.errors.join('\r\n').replace(/\n/g, '\n')
-      );
-
     this.logger.info([
       // tslint:disable-next-line: max-line-length
-      `Extracted ${this.resourcesExtracted} resources from ${this.base.CHARACTERS.length} characters. (Expected: ${this.resourcesFound})`,
+      `Extracted ${this.resourcesExtracted} resources from ${this.base.characters.length} characters. (Expected: ${this.resourcesFound})`,
       `Files Found: ${this.filesFound}`,
-      this.errors.length
+      this.error
         ? [
           'I have detected some errors during the process.',
-          `Error log can be found at ${process.cwd()}\\scenarios-error.log`,
+          `Error log can be found at ${process.cwd()}\\logs\\error.log`,
         ].join('\n')
         : '',
     ].join('\n'));
@@ -116,9 +130,8 @@ export default class Extractor {
 
       return res;
     } catch (err) {
-      this.errors.push(formatErr(`[${id}] \n ${err.stack}`));
-
-      if (this.verbose) this.logger.warn(`Failed getting hashes for ${id} see scenario-error.log...`);
+      this.error = true;
+      this.logger.error(formatErr(`[${id}] \n ${err.stack}`));
 
       return [];
     }
@@ -138,7 +151,7 @@ export default class Extractor {
     if (!episodeId) {
       const predicted = Number(id.slice(1)) * 2;
       episodes = [ predicted - 1, predicted ];
-    } else if ([ 'SSR+', 'R' ].includes(this.base.CHARACTERS.find(i => i.id === id).rarity) || id.startsWith('e'))
+    } else if ([ 'SSR+', 'R' ].includes(this.base.characters.find(i => i.id === id).rarity) || id.startsWith('e'))
       episodes = [ episodeId - 1, episodeId ];
     else
       episodes = [ episodeId - 1, episodeId, episodeId + 1 ];
@@ -169,9 +182,8 @@ export default class Extractor {
           result.harem3Resource2 = scenes[0].resource_directory;
         }
       } catch (err) {
-        this.errors.push(formatErr(`[${id}] \n ${err.stack}`));
-
-        if (this.verbose) this.logger.warn(`Failed getting hashes for ${id} see scenario-error.log...`);
+        this.error = true;
+        this.logger.error(formatErr(`[${id}] \n ${err.stack}`));
 
         continue;
       }
@@ -180,45 +192,151 @@ export default class Extractor {
     const resValues = Object.values(result);
 
     for (const resource of resValues)
-      this.files[id] = { [resource]: [] };
+      Object.assign(this.files[id].resources, { [resource]: [] });
 
     return resValues;
   }
 
+  // WIP
   private async _download () {
-    for (const chara in this.files) {
-      if (!this.files[chara]) continue;
+    // Two sections (Story / Scenario) will be processed in different way.
+    // Refactor this when you're not lazy enough
+    // ~~Not yet tested. Test this! (Specially SFTPs)~~
+    // Already tested but seems the process is way too slow.
+    // Deciding to divide this into two branch:
+    //   master: Download all assets and process scripts
+    //   *: Process the images
 
-      const resourceDirectories = this.files[chara];
+    // Story
+    let current = 1;
+    for (const url of this.miscFiles) {
+      if (this.blacklist.includes(url)) continue;
 
-      if (this.verbose) this.logger.warn(`Extracting resource assets for ${chara}...`);
+      const destination = `${this.base.DESTINATION.EPISODES}misc`;
+      const name = url.split('/').pop();
+      const file = new Downloader({ url });
 
-      for (const resourceDirectory in resourceDirectories) {
-        if (!resourceDirectories[resourceDirectory]) continue;
+      this.logger.info(`Downloading Story assets... [${current} / ${this.miscFiles.length}]`);
 
-        const files = resourceDirectories[resourceDirectory];
-        const _files: string[] = [];
-        this.filesFound += files.length;
+      try {
+        const fileBuffer = await file.download(true) as Buffer;
 
-        if (this.verbose) this.logger.warn(`Extracting ${resourceDirectory} assets...`);
+        await ssh.exec(`mkdir -p ${destination}`);
+        // @ts-ignore
+        await sftp.writeFile(`${destination}/${name}`, fileBuffer, { encoding: 'binary' });
+        this.logger.info(`Successfully written ${name} to server`);
 
-        for (const file of files) {
-          if (!file) continue;
-          else if (this.blacklist.includes(file)) continue;
+        if (/\.(?:jpe?g|png)$/.test(name)) {
+          await convert.writeWebpToServer(fileBuffer, { server: sftp, path: `${destination}/${name}` });
+          this.logger.info(`Successfully written ${name}.webp to server`);
+        }
 
-          _files.push(file);
+        current++;
+      } catch (f) {
+        this.error = true;
+        this.logger.error(formatErr(`[MISC]\n  [${url}]\n  ${f.stack}`));
+      }
+    }
+
+    // Scenario
+    for (const id of Object.keys(this.files)) {
+      const resourceDirectories = this.files[id].resources;
+      const characterName = this.files[id].name;
+
+      this.logger.debug(`Downloading resource assets for ${id}...`);
+
+      for (const resourceDirectory of Object.keys(resourceDirectories)) {
+        const urls = resourceDirectories[resourceDirectory];
+        const filenames: string[] = [];
+        const zip = new Zip();
+        current = 1;
+        this.filesFound += urls.length;
+
+        this.logger.debug(`Downloading ${resourceDirectory} assets...`);
+
+        for (const url of urls) {
+          if (this.blacklist.includes(url)) continue;
+
+          const destination = `${this.base.DESTINATION.EPISODES}${id}/${resourceDirectory}`;
+          const name = url.split('/').pop();
+          const file = new Downloader({ url });
+
+          this.logger.info(`Downloading Scenario ${id}... [${current} / ${urls.length}]`);
+
+          // continue here where you need to:
+          // convert to gif
+          // put gif files into a zip then send it to server (jzip does the job exactly)
+          try {
+            const fileBuffer = await file.download(true) as Buffer;
+
+            await ssh.exec(`mkdir -p ${destination}`);
+            // @ts-ignore
+            await sftp.writeFile(`${destination}/${name}`, fileBuffer, { encoding: 'binary' });
+            this.logger.info(`Successfully written ${name} to server`);
+
+            if (/\.(?:jpe?g|png)$/.test(name)) {
+              await convert.writeWebpToServer(fileBuffer, { server: sftp, path: `${destination}/${name}` });
+              this.logger.info(`Successfully written ${name}.webp to server`);
+
+              let processedImage: Buffer;
+              let fileName = name;
+              const stripVariant = name
+                .replace(/\.\w+$/, '')
+                .replace(/^.+_/, '');
+
+              if ([ 'a', 'd' ].includes(stripVariant))
+                processedImage = await convert.rotate(fileBuffer);
+              else {
+                const delay = stripVariant === 'b'
+                  ? 1
+                  : [ 'c1', 'c2' ].includes(stripVariant)
+                    ? 0.67
+                    : 2;
+                processedImage = await convert.animate(fileBuffer, { delay });
+                processedImage = await convert.optimiseAnimation(processedImage);
+                fileName = name.replace(/\.\w+$/, '.gif');
+              }
+
+              zip.file(fileName, processedImage, { binary: true, unixPermissions: '664' });
+            }
+
+            current++;
+          } catch (f) {
+              this.error = true;
+              this.logger.error(formatErr(`[${id}]\n  [${url}]\n  ${f.stack}`));
+          }
+
+          filenames.push(name);
         }
 
         try {
-          await fs.outputFile(this.base.DESTINATION + `/${chara}/${resourceDirectory}/files.rsc`, _files.join(','));
-        } catch (err) {
-          this.errors.push(formatErr(`[${chara}] [${resourceDirectory}]\n ${err.stack}`));
+          const filenamesPath = `${this.base.DESTINATION.EPISODES}${id}/${resourceDirectory}/`;
 
-          if (this.verbose) this.logger.warn(`Failed extracting ${resourceDirectory} assets see scenario-error.log...`);
+          await ssh.exec(`mkdir -p ${filenamesPath}`);
+          // @ts-ignore
+          await sftp.writeFile(filenamesPath + 'files.rsc', filenames.join(','));
+          this.logger.info('Successfully written files.rsc to server');
+
+          const zipBuffer = await zip.generateAsync({
+            type: 'nodebuffer',
+            comment: 'Generated by kh-snek <https://kamihimedb.win>',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 }
+          });
+          const zipName = `${characterName}_${resourceDirectory}.zip`;
+          const zipPath = `${this.base.DESTINATION.MISC}${id}/`;
+
+          await ssh.exec(`mkdir -p ${zipPath}`);
+          // @ts-ignore
+          await sftp.writeFile(zipPath + zipName, zipBuffer);
+          this.logger.info(`Successfully written ${zipName} to server`);
+        } catch (err) {
+          this.error = true;
+          this.logger.error(formatErr(`[${id}] [${resourceDirectory}]\n ${err.stack}`));
         }
       }
 
-      if (this.verbose) this.logger.info(`Finished extracting resource assets for ${chara}`);
+      this.logger.info(`Finished downloading resource assets for ${id}`);
     }
 
     return true;
@@ -228,7 +346,7 @@ export default class Extractor {
     let extracted = resources.length;
 
     for (const resource of resources) {
-      if (this.verbose) this.logger.warn(`Extracting ${id} resource script ${resource}...`);
+      this.logger.debug(`Extracting ${id} resource script ${resource}...`);
 
       const file = [ 0, 1, 3 ].includes(resources.indexOf(resource))
         ? '/scenario/first.ks'
@@ -243,10 +361,9 @@ export default class Extractor {
         const script = await data.text();
 
         if (!data.ok || !script) {
-          if (this.verbose)
-            this.logger.warn(
-              `Failed to download ${file} for ${resource} (${this.base.URL.SCENARIOS + folder + resource + file})`
-            );
+          this.logger.warn(
+            `Failed to download ${file} for ${resource} (${this.base.URL.SCENARIOS + folder + resource + file})`
+          );
 
           throw new Error(data.status + `: ${data.statusText}`);
         }
@@ -255,7 +372,8 @@ export default class Extractor {
           await this._doStory({
             id,
             resource,
-            script
+            script,
+            folder
           });
         else {
           const mainData = script
@@ -268,16 +386,16 @@ export default class Extractor {
           await this._doScenario({
             id,
             resource,
-            script: json
+            script: json,
+            folder
           });
         }
 
         this.logger.info(`Extracted ${id} resource script ${resource}`);
       } catch (err) {
         extracted--;
-        this.errors.push(formatErr(`[${id}] [${resource}]\n ${err.stack}`));
-
-        if (this.verbose) this.logger.warn(`Failed extracting ${resource} see scenario-error.log...`);
+        this.error = true;
+        this.logger.error(formatErr(`[${id}] [${resource}]\n ${err.stack}`));
       }
     }
 
@@ -285,15 +403,12 @@ export default class Extractor {
   }
 
   private async _doStory (
-    { id, resource, script }:
-    { id: string, resource: string, script: string }
+    { id, resource, script, folder }:
+    { id: string, resource: string, script: string, folder: string }
   ) {
     const chara = {};
     let lines = [];
-    let name;
-
-    if (!this.files[id][resource])
-      this.files[id][resource] = [];
+    let name: string;
 
     const entries = script
       .replace(/\]\[/, ']\n[')
@@ -321,14 +436,16 @@ export default class Extractor {
 
         switch (attribute.command) {
           case 'chara_new': {
-            this.files[id][resource].push(attribute.storage);
-            Object.assign(chara, { [attribute.name]: { name: attribute.jname } });
+            this.miscFiles.push(this.base.URL.FG_IMAGE + attribute.storage);
+            Object.assign(chara, { [attribute.name]: { name: attribute.jname, storage: attribute.storage } });
             break;
           }
 
           case 'chara_face': {
-            this.files[id][resource].push(attribute.storage);
+            const url = this.base.URL.FG_IMAGE + attribute.storage;
 
+            if (!this.miscFiles.includes(url))
+              this.miscFiles.push(url);
             if (!chara[attribute.name].face)
               Object.assign(chara[attribute.name], { face: {} });
 
@@ -337,7 +454,7 @@ export default class Extractor {
           }
 
           case 'playbgm': {
-            this.files[id][resource].push(attribute.storage);
+            this.miscFiles.push(this.base.URL.BGM + attribute.storage);
             lines.push({ bgm: attribute.storage });
             break;
           }
@@ -347,13 +464,15 @@ export default class Extractor {
 
             if (irrBG) continue;
 
-            this.files[id][resource].push(attribute.storage);
+            this.miscFiles.push(this.base.URL.BG_IMAGE + attribute.storage);
             lines.push({ bg: attribute.storage });
             break;
           }
 
           case 'chara_show': {
             name = chara[attribute.name] ? chara[attribute.name].name : '';
+
+            lines.push({ expression: chara[attribute.name] ? chara[attribute.name].storage : '' });
             break;
           }
 
@@ -367,7 +486,9 @@ export default class Extractor {
 
             if (!isGetIntro) continue;
 
-            this.files[id][resource].push(attribute.storage);
+            this.files[id].resources[resource].push(
+              `${this.base.URL.SCENARIOS}${folder}${resource}/sound/${attribute.storage}`
+            );
             lines.push({ voice: attribute.storage });
             break;
           }
@@ -382,12 +503,12 @@ export default class Extractor {
           .replace(/(["%])/g, '\\$&')
           .replace(/\[l\]|\[r\]|\[cm\]|^;.+/g, '')
           .replace(/(\.{1,3})(?=[^\s\W])/g, '$& ')
-          .replace(/&nbsp;/gi, ' ');
+          .replace(/&nbsp;?/gi, ' ');
         const invalidTalk = (text.replace(/ /g, '')).length < 2;
 
         if (invalidTalk) continue;
 
-        lines.push({ chara: name ? name.replace(/&nbsp;/gi, ' ') : name, words: text });
+        lines.push({ chara: name ? name.replace(/&nbsp;?/gi, ' ') : name, words: text });
       }
     }
 
@@ -427,35 +548,35 @@ export default class Extractor {
       }
     }
 
-    await fs.outputJSON(
-      this.base.DESTINATION + `/${id}/${resource}/script.json`,
-      { scenario: lines },
-      { spaces: 2 }
-    );
+    const scriptPath = `${this.base.DESTINATION.EPISODES}${id}/${resource}/`;
+
+    await ssh.exec(`mkdir -p ${scriptPath}`);
+    // @ts-ignore
+    await sftp.writeFile(scriptPath + 'script.json', JSON.stringify({ scenario: lines }));
 
     return true;
   }
 
   private async _doScenario (
-    { id, resource, script }:
-    { id: string, resource: string, script: IScenarioSequence[] }
+    { id, resource, script, folder }:
+    { id: string, resource: string, script: IScenarioSequence[], folder: string }
   ) {
     const lines = [];
-
-    if (!this.files[id][resource])
-      this.files[id][resource] = [];
 
     for (const entry of script) {
       const entryData = {};
 
       if (entry.bgm) {
-        this.files[id][resource].push(entry.bgm);
+        this.miscFiles.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${entry.bgm}`);
 
         Object.assign(entryData, { bgm: entry.bgm });
       }
 
       if (entry.film) {
-        this.files[id][resource].push(entry.film);
+        const url = `${this.base.URL.SCENARIOS}${folder}${resource}/${entry.film}`;
+
+        if (![ 'black.jpg', 'pink_s.jpg' ].includes(entry.film))
+          this.files[id].resources[resource].push(url);
 
         const fps = Number(entry.fps);
 
@@ -472,7 +593,7 @@ export default class Extractor {
         const talkEntry = {};
 
         if (line.hasOwnProperty('voice')) {
-          this.files[id][resource].push(line.voice);
+          this.files[id].resources[resource].push(`${this.base.URL.SCENARIOS}${folder}${resource}/${line.voice}`);
 
           if (line.voice.length)
             Object.assign(talkEntry, { voice: line.voice });
@@ -504,11 +625,11 @@ export default class Extractor {
       lines.push(entryData);
     }
 
-    await fs.outputJSON(
-      this.base.DESTINATION + `/${id}/${resource}/script.json`,
-      { scenario: lines },
-      { spaces: 2 }
-    );
+    const scriptPath = `${this.base.DESTINATION.EPISODES}${id}/${resource}/`;
+
+    await ssh.exec(`mkdir -p ${scriptPath}`);
+    // @ts-ignore
+    await sftp.writeFile(scriptPath + 'script.json', JSON.stringify({ scenario: lines }));
 
     return true;
   }

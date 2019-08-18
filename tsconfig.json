@@ -3,6 +3,7 @@
     "baseUrl": "./",
     "forceConsistentCasingInFileNames": true,
     "module": "commonjs",
+    "esModuleInterop": true,
     "moduleResolution": "node",
     "noUnusedLocals": true,
     "outDir": "dist",

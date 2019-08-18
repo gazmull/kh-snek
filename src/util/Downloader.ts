@@ -11,10 +11,10 @@ export default class Downloader {
 
   /**
    * Downloads the file.
-   * @param {boolean} returnData Immediately return the raw data instead.
-   * @returns {Promise<FilePath|Buffer>} - path of the downloaded file; if returnData, returns Buffer.
+   * @param returnData Immediately return the raw data instead of writing to destination.
+   * @returns path of the downloaded file; if returnData is true, it returns Buffer.
    */
-  public async download (returnData = false): Promise<string | Buffer> {
+  public async download (returnData: boolean = false): Promise<string | Buffer> {
     const url = this.options.url;
     const destDirectory = this.options.destination;
     const filename = this.options.name || this.options.url.split('/').pop();
@@ -68,6 +68,6 @@ export default class Downloader {
  */
 interface IOptions {
   url: string;
-  destination: string;
+  destination?: string;
   name?: string;
 }

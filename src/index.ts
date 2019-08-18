@@ -1,12 +1,17 @@
-import * as Knex from 'knex';
-import { resolve } from 'path';
-import { IKamihime } from '../typings';
+import { prompt } from 'inquirer';
+import Knex from 'knex';
 import { Config as Database } from 'knex';
-import { KamihimeGrant } from '../typings/auth';
-import Winston from './util/Logger';
+import { IKamihime } from '../typings';
+import { Directories, KamihimeGrant } from '../typings/auth';
 import Extractor from './util/Extractor';
+import Winston from './util/Logger';
 
-const { database, grant }: { database: Database, grant: KamihimeGrant } = require('../auth');
+// tslint:disable-next-line:no-var-requires
+const { database, destinations }: { database: Database, destinations: Directories } = require('../auth');
+const grant: KamihimeGrant = {
+  xsrf: '',
+  session: ''
+};
 
 let code = 0;
 const logger = new Winston().logger;
@@ -17,13 +22,37 @@ export default async function start () {
   try {
     logger.warn('kh-snek started...');
 
-    if (!grant.xsrf || !grant.session) throw new Error('XSRF Token or Session is empty. Terminating process...');
+    const answers = await prompt([
+      {
+        name: 'xsrf',
+        message: 'XSRF Token',
+        validate: input => {
+          if (!input)
+            return 'You cannot skip this. Try again';
 
-    // Planned prompt
-    logger.warn('Will use the existing Kamihime credentials. You are about to yeet. Goodluck!');
+          return true;
+        }
+      },
+      {
+        name: 'session',
+        message: 'Session Token',
+        validate: input => {
+          if (!input)
+            return 'You cannot skip this. Try again';
 
-    let query = Knex(database)('kamihime').select([ 'id', 'rarity' ])
-      .where('approved', 1);
+          return true;
+        }
+      },
+    ]);
+
+    grant.xsrf = answers.xsrf;
+    grant.session = answers.session;
+
+    logger.warn('You are about to get yeeted. Goodluck!');
+
+    let query = Knex(database)('kamihime').select([ 'id', 'name', 'rarity' ])
+      .where('approved', 1)
+      .andWhere('harem1Resource1', null);
 
     const latest = process.argv.find(el => [ '-l', '--latest=' ].some(f => new RegExp(`^${f}`, 'i').test(el)));
     const id = process.argv.find(el => [ '-i', '--id=' ].some(f => new RegExp(`^${f}`, 'i').test(el)));
@@ -72,32 +101,40 @@ export default async function start () {
       }
     }
 
-    const CHARACTERS: IKamihime[] = await query;
+    const characters: IKamihime[] = await query;
 
-    if (!CHARACTERS.length) logger.info('Nothing to be processed.');
-    else
-      await new Extractor({
-        logger,
-        grant,
-        db: Knex(database),
-        base: {
-          CHARACTERS,
-          DESTINATION: resolve(__dirname, '../../../static/scenarios'),
-          URL: {
-            SCENARIOS: 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/',
-            EPISODES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/episodes/',
-            SOULS: {
-              INFO: 'https://cf.r.kamihimeproject.dmmgames.com/v1/a_jobs/'
-            },
-            EIDOLONS: {
-              SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/summons/'
-            },
-            KAMIHIMES: {
-              SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/characters/'
-            }
+    if (!characters.length) throw new Error('Nothing to be processed.');
+
+    const SCENARIOS = 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/';
+
+    await new Extractor({
+      logger,
+      grant,
+      db: Knex(database),
+      base: {
+        characters,
+        DESTINATION: {
+          EPISODES: destinations.scenarios,
+          MISC: destinations.zips
+        },
+        URL: {
+          FG_IMAGE: SCENARIOS + 'fgimage/',
+          BG_IMAGE: SCENARIOS + 'bgimage/',
+          BGM: SCENARIOS + 'bgm/',
+          SCENARIOS,
+          EPISODES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/episodes/',
+          SOULS: {
+            INFO: 'https://cf.r.kamihimeproject.dmmgames.com/v1/a_jobs/'
+          },
+          EIDOLONS: {
+            SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/summons/'
+          },
+          KAMIHIMES: {
+            SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/characters/'
           }
         }
-      }).exec();
+      }
+    }).exec();
   } catch (err) {
     logger.error(err.stack);
 

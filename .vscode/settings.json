@@ -1,0 +1,5 @@
+{
+  "tslint.configFile": ".\\.tslint.js",
+  "tslint.jsEnable": true,
+  "tslint.exclude": "dist",
+}

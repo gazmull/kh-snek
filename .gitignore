@@ -1,9 +1,11 @@
 # Package Managers
 node_modules
 package-lock.json
+yarn-error.log
 
 #Private Credentials
 scenarios
+zips
 auth.js
 logs
 dist

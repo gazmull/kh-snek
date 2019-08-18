@@ -1,18 +1,23 @@
 import chalk from 'chalk';
 import { inspect } from 'util';
 import { createLogger, format, transports } from 'winston';
-import * as RotateFile from 'winston-daily-rotate-file';
 
 export default class Winston {
   public logger = createLogger({
     exitOnError: false,
     format: this.baseFormat(),
     transports: [
-      new transports.Console(), new RotateFile({
+      new transports.Console(),
+      new transports.File({
         dirname: process.cwd() + '/logs',
-        filename: 'snek.%DATE%.log',
-        maxFiles: '15d',
-        maxSize: '256m'
+        filename: 'snek.log',
+        format: format.uncolorize()
+      }),
+      new transports.File({
+        dirname: process.cwd() + '/logs',
+        filename: 'error.log',
+        level: 'error',
+        format: format.uncolorize()
       }),
     ]
   });
