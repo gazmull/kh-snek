@@ -7,7 +7,7 @@ export default class ImageProcessor {
   public async writeWebpToServer (buffer: Buffer, options: { server: SFTP, path: string }) {
     const toWebpBuffer = () => new Promise((resolve, reject) => {
       im(buffer)
-        .quality(90)
+        .quality(85)
         .toBuffer('webp', (err, iBuffer) => {
           if (err)
             return reject(err);
@@ -41,13 +41,14 @@ export default class ImageProcessor {
 
   public async animate (buffer: Buffer, options: IAnimateOptions) {
     const img = im(buffer)
-      .delay(options.delay)
+      .in('-delay', String(options.delay))
       .out('-rotate', '-90<')
-      .crop(900, 640)
+      .out('-crop', '900x640')
       .out('+adjoin')
       .out('+repage')
-      .adjoin()
-      .loop(0);
+      .out('-adjoin')
+      .setFormat('gif')
+      .out('-loop', '0');
 
     return this.toBuffer(img);
   }

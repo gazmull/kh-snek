@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import { Github as gh } from '../../typings/auth';
 
+// tslint:disable-next-line:no-var-requires
 const { github }: { github: gh } = require('../../auth');
 
 export default async function GithubGist () {
