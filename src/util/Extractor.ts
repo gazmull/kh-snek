@@ -9,7 +9,6 @@ import Downloader from './Downloader';
 import GithubGist from './GithubGist';
 import ImageProcessor from './ImageProcessor';
 
-const formatErr = (message: string) => `${new Date().toLocaleString()}: ${message}`;
 // tslint:disable-next-line:no-var-requires
 const ssh = new SSH2Promise(require('../../auth').ssh);
 let sftp: SFTP;
@@ -131,7 +130,7 @@ export default class Extractor {
       return res;
     } catch (err) {
       this.error = true;
-      this.logger.error(formatErr(`[${id}] \n ${err.stack}`));
+      this.logger.error(`[${id}] \n ${err.stack}`);
 
       return [];
     }
@@ -183,7 +182,7 @@ export default class Extractor {
         }
       } catch (err) {
         this.error = true;
-        this.logger.error(formatErr(`[${id}] \n ${err.stack}`));
+        this.logger.error(`[${id}] \n ${err.stack}`);
 
         continue;
       }
@@ -234,7 +233,7 @@ export default class Extractor {
         current++;
       } catch (f) {
         this.error = true;
-        this.logger.error(formatErr(`[MISC]\n  [${url}]\n  ${f.stack}`));
+        this.logger.error(`[MISC]\n  [${url}]\n  ${f.stack}`);
       }
     }
 
@@ -303,7 +302,7 @@ export default class Extractor {
             current++;
           } catch (f) {
               this.error = true;
-              this.logger.error(formatErr(`[${id}]\n  [${url}]\n  ${f.stack}`));
+              this.logger.error(`[${id}]\n  [${url}]\n  ${f.stack}`);
           }
 
           filenames.push(name);
@@ -332,7 +331,7 @@ export default class Extractor {
           this.logger.info(`Successfully written ${zipName} to server`);
         } catch (err) {
           this.error = true;
-          this.logger.error(formatErr(`[${id}] [${resourceDirectory}]\n ${err.stack}`));
+          this.logger.error(`[${id}] [${resourceDirectory}]\n ${err.stack}`);
         }
       }
 
@@ -395,7 +394,7 @@ export default class Extractor {
       } catch (err) {
         extracted--;
         this.error = true;
-        this.logger.error(formatErr(`[${id}] [${resource}]\n ${err.stack}`));
+        this.logger.error(`[${id}] [${resource}]\n ${err.stack}`);
       }
     }
 
