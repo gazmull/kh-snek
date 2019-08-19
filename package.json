@@ -22,7 +22,7 @@
   "author": "https://github.com/gazmull",
   "license": "MIT",
   "dependencies": {
-    "chalk": "^2.4.2",
+    "@gazmull/logger": "gazmull/logger",
     "fs-extra": "^8.1.0",
     "gm": "^1.23.1",
     "inquirer": "^6.5.0",
@@ -30,8 +30,7 @@
     "knex": "^0.19.1",
     "mysql2": "^1.6.5",
     "node-fetch": "^2.6.0",
-    "ssh2-promise": "^0.1.5",
-    "winston": "^3.2.1"
+    "ssh2-promise": "^0.1.5"
   },
   "devDependencies": {
     "@types/fs-extra": "^8.0.0",

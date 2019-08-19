@@ -1,10 +1,10 @@
+import Winston from '@gazmull/logger';
 import { prompt } from 'inquirer';
 import Knex from 'knex';
 import { Config as Database } from 'knex';
 import { IKamihime } from '../typings';
 import { Directories, KamihimeGrant } from '../typings/auth';
 import Extractor from './util/Extractor';
-import Winston from './util/Logger';
 
 // tslint:disable-next-line:no-var-requires
 const { database, destinations }: { database: Database, destinations: Directories } = require('../auth');
@@ -14,7 +14,7 @@ const grant: KamihimeGrant = {
 };
 
 let code = 0;
-const logger = new Winston().logger;
+const logger = new Winston('snek').logger;
 
 start();
 
