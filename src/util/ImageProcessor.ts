@@ -5,17 +5,11 @@ const im = gm.subClass({ imageMagick: true });
 
 export default class ImageProcessor {
   public async writeWebpToServer (buffer: Buffer, options: { server: SFTP, path: string }) {
-    const toWebpBuffer = () => new Promise((resolve, reject) => {
-      im(buffer)
-        .quality(85)
-        .toBuffer('webp', (err, iBuffer) => {
-          if (err)
-            return reject(err);
-
-          return resolve(iBuffer);
-        });
-    }) as Promise<Buffer>;
-    const webpBuffer = await toWebpBuffer();
+    const img = im(buffer)
+      .quality(70)
+      .define('webp:method=6')
+      .setFormat('webp');
+    const webpBuffer = await this.toBuffer(img);
 
     // @ts-ignore
     return options.server.writeFile(options.path + '.webp', webpBuffer, { encoding: 'binary' });
