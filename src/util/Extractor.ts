@@ -196,16 +196,23 @@ export default class Extractor {
     // Refactor this when you're not lazy enough
     // ~~Not yet tested. Test this! (Specially SFTPs)~~
     // Already tested but seems the process is way too slow.
-    // Deciding to divide this into two branch:
+    // Deciding whether to divide this into two branches:
     //   master: Download all assets and process scripts
     //   *: Process the images
+    // Or finally explore `worker_thread` module to utilise all cores and make extraction efficient. Seems interesting!
 
     // Story Character Expressions/BGM/BG
     let current = 1;
+    const miscDestination = `${this.base.DESTINATION.EPISODES}misc`;
+    const existingMiscFiles = (await sftp.readdir(miscDestination).catch(() => []) as Array<{filename: string}>)
+      .filter(e => e && e.filename && !e.filename.endsWith('.webp'));
+
+    if (existingMiscFiles.length)
+      this.miscFiles = this.miscFiles.filter(e => !existingMiscFiles.find(m => m.filename === e.split('/').pop()));
+
     for (const url of this.miscFiles) {
       if (this.blacklist.includes(url)) continue;
 
-      const destination = `${this.base.DESTINATION.EPISODES}misc`;
       const name = url.split('/').pop();
       const file = new Downloader({ url });
 
@@ -213,14 +220,15 @@ export default class Extractor {
 
       try {
         const fileBuffer = await file.download(true) as Buffer;
+        const filePath = `${miscDestination}/${name}`;
 
-        await ssh.exec(`mkdir -p ${destination}`);
+        await ssh.exec(`mkdir -p ${miscDestination}`);
         // @ts-ignore
-        await sftp.writeFile(`${destination}/${name}`, fileBuffer, { encoding: 'binary' });
+        await sftp.writeFile(filePath, fileBuffer, { encoding: 'binary' });
         this.logger.info(`Successfully written ${name} to server`);
 
         if (/\.(?:jpe?g|png)$/.test(name)) {
-          await convert.writeWebpToServer(fileBuffer, { server: sftp, path: `${destination}/${name}` });
+          await convert.writeWebpToServer(fileBuffer, { server: sftp, path: filePath });
           this.logger.info(`Successfully written ${name}.webp to server`);
         }
 
@@ -256,9 +264,6 @@ export default class Extractor {
 
           this.logger.info(`Downloading Scenario ${id}... [${current} / ${urls.length}]`);
 
-          // continue here where you need to:
-          // convert to gif
-          // put gif files into a zip then send it to server (jzip does the job exactly)
           try {
             const fileBuffer = await file.download(true) as Buffer;
 
