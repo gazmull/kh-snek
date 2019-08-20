@@ -41,7 +41,7 @@ export default class Downloader {
     return join(destDirectory, filename);
   }
 
-  public static async exists (filepath): Promise<boolean> {
+  public static async exists (filepath: string): Promise<boolean> {
     try {
       await fs.stat(filepath);
 
