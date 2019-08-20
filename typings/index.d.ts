@@ -36,8 +36,16 @@ export interface IExtractorFiles {
     name: string;
     resources: {
       [key: string]: string[];
-    }
+    };
   };
+}
+
+export interface IHaremResources {
+  harem1Resource1?: string;
+  harem2Resource1?: string;
+  harem2Resource2?: string;
+  harem3Resource1?: string;
+  harem3Resource2?: string;
 }
 
 export interface IScenarioSequence {
