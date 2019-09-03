@@ -7,8 +7,7 @@
     "test": "gulp",
     "dev:watch": "tsc -p . --watch",
     "dev:lint-fix": "gulp lint --fix",
-    "dev:lint": "gulp lint",
-    "pm2": "pm2 start .pm2.yml --env production"
+    "dev:lint": "gulp lint"
   },
   "engine": {
     "node": ">=10"
@@ -22,28 +21,29 @@
   "author": "https://github.com/gazmull",
   "license": "MIT",
   "dependencies": {
-    "@gazmull/logger": "gazmull/logger",
+    "@gazmull/logger": "github:gazmull/logger",
+    "collection": "github:discordjs/collection",
     "fs-extra": "^8.1.0",
     "gm": "^1.23.1",
-    "inquirer": "^6.5.0",
+    "inquirer": "^7.0.0",
     "jszip": "^3.2.2",
-    "knex": "^0.19.1",
-    "mysql2": "^1.6.5",
+    "knex": "^0.19.3",
+    "mysql2": "^1.7.0",
     "node-fetch": "^2.6.0",
     "ssh2-promise": "^0.1.5"
   },
   "devDependencies": {
     "@types/fs-extra": "^8.0.0",
-    "@types/gm": "^1.18.3",
+    "@types/gm": "^1.18.4",
     "@types/inquirer": "^6.5.0",
     "@types/jszip": "^3.1.6",
-    "@types/node": "^12.7.1",
+    "@types/node": "^12.7.3",
     "@types/node-fetch": "^2.5.0",
     "gulp": "^4.0.2",
     "gulp-tslint": "^8.1.4",
     "gulp-typescript": "^5.0.1",
-    "tslint": "^5.18.0",
+    "tslint": "^5.19.0",
     "tslint-eslint-rules": "^5.4.0",
-    "typescript": "^3.5.3"
+    "typescript": "^3.6.2"
   }
 }
