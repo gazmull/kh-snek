@@ -1,3 +1,5 @@
+import * as Knex from 'knex';
+
 /**
  * @property gist The Github Gist ID.
  * @property token The Github user's personal access token.
@@ -30,4 +32,17 @@ export type KamihimeGrant = {
 export type Directories = {
   scenarios: string;
   zips: string;
+}
+
+export interface Auth {
+  database: Knex.Config;
+  github: Github;
+  ssh: {
+    host: string;
+    port: string;
+    username: string;
+    identity: string;
+    passphrase?: string;
+  };
+  destinations: Directories;
 }

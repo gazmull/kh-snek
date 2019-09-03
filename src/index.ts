@@ -1,8 +1,9 @@
 import Winston from '@gazmull/logger';
+import Collection from 'collection';
 import { prompt } from 'inquirer';
 import Knex from 'knex';
 import { Config as Database } from 'knex';
-import { IKamihime } from '../typings';
+import { ICharacter } from '../typings';
 import { Directories, KamihimeGrant } from '../typings/auth';
 import Extractor from './util/Extractor';
 
@@ -101,16 +102,16 @@ export default async function start () {
       }
     }
 
-    const characters: IKamihime[] = await query;
+    let characters: ICharacter[] = await query;
 
     if (!characters.length) throw new Error('Nothing to be processed.');
 
+    characters = characters.map(char => ({ ...char, resources: new Collection() }));
     const SCENARIOS = 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/';
 
     await new Extractor({
       logger,
       grant,
-      db: Knex(database),
       base: {
         characters,
         DESTINATION: {

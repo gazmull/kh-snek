@@ -1,13 +1,14 @@
-import * as Knex from 'knex';
 import { Logger } from 'winston';
 import { KamihimeGrant } from './auth';
+import SSH2Promise from 'ssh2-promise';
+import SFTP from 'ssh2-promise/dist/sftp';
+import Collection from 'collection';
 
 export interface IExtractorOptions {
   logger: Logger;
   grant: KamihimeGrant;
-  db: Knex;
   base: {
-    characters: IKamihime[];
+    characters: ICharacter[];
     DESTINATION: {
       MISC: string;
       EPISODES: string;
@@ -31,21 +32,22 @@ export interface IExtractorOptions {
   };
 }
 
-export interface IExtractorFiles {
-  [key: string]: {
-    name: string;
-    resources: {
-      [key: string]: string[];
-    };
-  };
+export type downloadManagerData = string[] | ICharacter[];
+
+export type truncatedDownload = string[] | ICharacter;
+
+export type hashIdentifier = 'harem1Resource1' | 'harem2Resource1' | 'harem2Resource2' | 'harem3Resource1' | 'harem3Resource2';
+
+export interface IResourceValues {
+  hash: string;
+  urls: string[];
 }
 
-export interface IHaremResources {
-  harem1Resource1?: string;
-  harem2Resource1?: string;
-  harem2Resource2?: string;
-  harem3Resource1?: string;
-  harem3Resource2?: string;
+export interface ICharacter {
+  id?: string;
+  name?: string;
+  rarity?: string;
+  resources: Collection<hashIdentifier, IResourceValues>;
 }
 
 export interface IScenarioSequence {
@@ -58,15 +60,4 @@ export interface IScenarioSequence {
     voice: string;
     words: string;
   }>;
-}
-
-export interface IKamihime {
-  harem1Resource1?: string;
-  harem2Resource1?: string;
-  harem2Resource2?: string;
-  harem3Resource1?: string;
-  harem3Resource2?: string;
-  id?: string;
-  name?: string;
-  rarity?: string;
 }
