@@ -1,18 +1,15 @@
 import * as gm from 'gm';
-import SFTP from 'ssh2-promise/dist/sftp';
 
 const im = gm.subClass({ imageMagick: true });
 
 export default class ImageProcessor {
-  public async writeWebpToServer (buffer: Buffer, options: { server: SFTP, path: string }) {
+  public async toWebpBuffer (buffer: Buffer) {
     const img = im(buffer)
       .quality(70)
       .define('webp:method=6')
       .setFormat('webp');
-    const webpBuffer = await this.toBuffer(img);
 
-    // @ts-ignore
-    return options.server.writeFile(options.path + '.webp', webpBuffer, { encoding: 'binary' });
+    return this.toBuffer(img);
   }
 
   public toBuffer (img: gm.State): Promise<Buffer> {
@@ -49,8 +46,8 @@ export default class ImageProcessor {
 
   public async optimiseAnimation (buffer: Buffer) {
     const img = im(buffer)
-      .out('-fuzz', '5%')
-      .out('-layers', 'Optimize');
+      .out('-fuzz', '3%')
+      .out('-layers', 'OptimizeTransparency');
 
     return this.toBuffer(img);
   }
