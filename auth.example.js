@@ -29,8 +29,9 @@ exports.ssh = {
 
 /**
  * [Remote] Destinations
+ * Paths should end with `/`.
  */
 exports.destinations = {
-  scenarios: '/home/warspite/myStatic/scenarios',
-  zips: '/home/warspite/myStatic/zips'
+  scenarios: '/home/warspite/myStatic/scenarios/',
+  zips: '/home/warspite/myStatic/zips/'
 };
