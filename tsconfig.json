@@ -12,7 +12,6 @@
         "typings/*"
       ]
     },
-    "incremental": true,
     "removeComments": true,
     "target": "es2018"
   },
