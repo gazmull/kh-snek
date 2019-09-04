@@ -130,7 +130,7 @@ async function doSpecifics (char: ICharacter) {
               ? 6
               : [ 'c1', 'c2' ].includes(stripVariant)
                 ? 4
-                : 9;
+                : 12;
             processedImage = await convert.animate(fileBuffer, { delay });
             processedImage = await convert.optimiseAnimation(processedImage);
             fileName = name.replace(/\.\w+$/, '.gif');
