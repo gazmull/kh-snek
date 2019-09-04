@@ -5,7 +5,7 @@ import Knex from 'knex';
 import { Config as Database } from 'knex';
 import { ICharacter } from '../typings';
 import { Directories, KamihimeGrant } from '../typings/auth';
-import Extractor from './util/Extractor';
+import Extractor from './lib/Extractor';
 
 // tslint:disable-next-line:no-var-requires
 const { database, destinations }: { database: Database, destinations: Directories } = require('../auth');
