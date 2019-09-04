@@ -2,7 +2,7 @@ import Collection from 'collection';
 import * as OS from 'os';
 import * as path from 'path';
 import { Worker } from 'worker_threads';
-import { downloadManagerData, ICharacter, truncatedDownload } from '../../../typings';
+import { downloadManagerData, hashIdentifier, ICharacter, IResourceValues, truncatedDownload } from '../../../typings';
 
 export default class DownloadManager {
 
@@ -32,36 +32,23 @@ export default class DownloadManager {
    * - In case of error, worker will send a message to parent
    */
   public async exec () {
-    const cpus = OS.cpus();
     const workersResult: Array<string | Error> = [];
 
     if (typeof this.data[0] === 'string') {
-      const sliceLength = Math.ceil(this.data.length / cpus.length);
-      const workers = await Promise.all(
-        cpus.map((_, idx) => {
-          const data = this.data.splice(0, sliceLength);
-
-          if (!data.length) return Promise.resolve('Worker spawn skipped');
-
-          return this._spawnWorker(idx, data as string[]);
-        })
-      );
+      const balancedData = this._balanceData(this.data as string[]);
+      const workers = await Promise.all(balancedData.map((val, idx) => this._spawnWorker(idx, val)));
 
       workersResult.push(...workers);
     } else
       for (const char of this.data as ICharacter[]) {
         const resources = [ ...char.resources.entries() ];
-        const sliceLength = Math.ceil(resources.length / cpus.length);
+        const balancedData = this._balanceData<[hashIdentifier, IResourceValues]>(resources);
         const workers = await Promise.all(
-          cpus.map((_, idx) => {
-            const data = resources.splice(0, sliceLength);
-
-            if (!data.length) return Promise.resolve('Worker spawn skipped');
-
+          balancedData.map((val, idx) => {
             const finalData: ICharacter = {
               id: char.id,
               name: char.name,
-              resources: new Collection(data)
+              resources: new Collection(val)
             };
 
             return this._spawnWorker(idx, finalData);
@@ -89,5 +76,21 @@ export default class DownloadManager {
           resolve(`[worker-${id}] exited ${errored ? 'with error(s)' : 'nicely'}.`);
         });
     });
+  }
+
+  private _balanceData <T> (data: T[]) {
+    const cpus = OS.cpus();
+    const balancedData = Array.from<unknown, T[]>({ length: cpus.length }, () => []);
+    const lastIndex = cpus.length - 1;
+    let lastFilled = 0;
+
+    for (const datum of data) {
+      if (lastFilled > lastIndex) lastFilled = 0;
+
+      balancedData[lastFilled].push(datum);
+      lastFilled++;
+    }
+
+    return balancedData.filter(e => e.length);
   }
 }
