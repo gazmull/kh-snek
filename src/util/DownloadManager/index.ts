@@ -1,4 +1,3 @@
-// Existing issue: workersResult isn't being logged by the main thread probably due to asynchronous behaviour.
 import Collection from 'collection';
 import * as OS from 'os';
 import * as path from 'path';
@@ -48,7 +47,7 @@ export default class DownloadManager {
         })
       );
 
-      workersResult.concat(workers);
+      workersResult.push(...workers);
     } else
       for (const char of this.data as ICharacter[]) {
         const resources = [ ...char.resources.entries() ];
@@ -69,7 +68,7 @@ export default class DownloadManager {
           })
         );
 
-        workersResult.concat(workers);
+        workersResult.push(...workers);
       }
 
     return workersResult;
