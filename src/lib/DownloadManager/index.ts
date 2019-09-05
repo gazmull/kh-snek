@@ -2,7 +2,7 @@ import Collection from 'collection';
 import * as OS from 'os';
 import * as path from 'path';
 import { Worker } from 'worker_threads';
-import { downloadManagerData, hashIdentifier, ICharacter, IResourceValues, truncatedDownload } from '../../../typings';
+import { downloadManagerData, ICharacter } from '../../../typings';
 
 export default class DownloadManager {
 
@@ -32,36 +32,39 @@ export default class DownloadManager {
    * - In case of error, worker will send a message to parent
    */
   public async exec () {
+    let data: downloadManagerData;
     const workersResult: Array<string | Error> = [];
 
-    if (typeof this.data[0] === 'string') {
-      const balancedData = this._balanceData(this.data as string[]);
-      const workers = await Promise.all(balancedData.map((val, idx) => this._spawnWorker(idx, val)));
+    if (typeof this.data[0] === 'string')
+      data = this.data as string[];
+    else {
+      const splattedCharacters: ICharacter[] = [];
 
-      workersResult.push(...workers);
-    } else
       for (const char of this.data as ICharacter[]) {
         const resources = [ ...char.resources.entries() ];
-        const balancedData = this._balanceData<[hashIdentifier, IResourceValues]>(resources);
-        const workers = await Promise.all(
-          balancedData.map((val, idx) => {
-            const finalData: ICharacter = {
-              id: char.id,
-              name: char.name,
-              resources: new Collection(val)
-            };
+        const out = resources.map(v => {
+          return {
+            id: char.id,
+            name: char.name,
+            resources: new Collection([ v ])
+          };
+        });
 
-            return this._spawnWorker(idx, finalData);
-          })
-        );
-
-        workersResult.push(...workers);
+        splattedCharacters.push(...out);
       }
+
+      data = splattedCharacters;
+    }
+
+    const balancedData = this._balanceData<string | ICharacter>(data);
+    const workers = await Promise.all(balancedData.map((val, idx) => this._spawnWorker(idx, val)));
+
+    workersResult.push(...workers);
 
     return workersResult;
   }
 
-  private _spawnWorker (id: number, downloads: truncatedDownload): Promise<string | Error> {
+  private _spawnWorker (id: number, downloads: downloadManagerData): Promise<string | Error> {
     return new Promise(resolve => {
       const workerData = { id, downloads };
       const worker = new Worker(path.join(__dirname, 'worker.js'), { workerData });
@@ -78,7 +81,7 @@ export default class DownloadManager {
     });
   }
 
-  private _balanceData <T> (data: T[]) {
+  private _balanceData<T> (data: T[]) {
     const cpus = OS.cpus();
     const balancedData = Array.from<unknown, T[]>({ length: cpus.length }, () => []);
     const lastIndex = cpus.length - 1;

@@ -32,9 +32,7 @@ export interface IExtractorOptions {
   };
 }
 
-export type downloadManagerData = string[] | ICharacter[];
-
-export type truncatedDownload = string[] | ICharacter;
+export type downloadManagerData = (string | ICharacter)[];
 
 export type hashIdentifier = 'harem1Resource1' | 'harem2Resource1' | 'harem2Resource2' | 'harem3Resource1' | 'harem3Resource2';
 
