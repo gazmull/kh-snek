@@ -293,8 +293,11 @@ export default class Extractor {
 
         switch (attribute.command) {
           case 'chara_new': {
-            if (!this.blacklist.includes(attribute.storage))
-              this.miscFiles.push(this.base.URL.FG_IMAGE + attribute.storage);
+            const url = this.base.URL.FG_IMAGE + attribute.storage;
+            const blacklisted = this.blacklist.includes(attribute.storage);
+
+            if (!blacklisted && !this.miscFiles.includes(url))
+              this.miscFiles.push(url);
 
             Object.assign(chara, { [attribute.name]: { name: attribute.jname, storage: attribute.storage } });
             break;
@@ -314,7 +317,11 @@ export default class Extractor {
           }
 
           case 'playbgm': {
-            this.miscFiles.push(this.base.URL.BGM + attribute.storage);
+            const url = this.base.URL.BGM + attribute.storage;
+
+            if (!this.miscFiles.includes(url))
+              this.miscFiles.push(url);
+
             lines.push({ bgm: attribute.storage });
             break;
           }
@@ -324,7 +331,11 @@ export default class Extractor {
 
             if (irrBG) continue;
 
-            this.miscFiles.push(this.base.URL.BG_IMAGE + attribute.storage);
+            const url = this.base.URL.BG_IMAGE + attribute.storage;
+
+            if (!this.miscFiles.includes(url))
+              this.miscFiles.push(url);
+
             lines.push({ bg: attribute.storage });
             break;
           }
