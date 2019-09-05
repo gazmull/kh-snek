@@ -62,6 +62,8 @@ export default class Extractor {
       this.logger.info('Connected to remote server via SSH.');
     } catch (err) { throw new Error(err); }
 
+    this.blacklist = await GithubGist();
+
     for (const character of this.base.characters) {
       const { id } = character;
 
@@ -74,8 +76,6 @@ export default class Extractor {
 
     ssh.close();
     this.logger.info('Closed SSH connection. (Not necessary anymore)');
-
-    this.blacklist = await GithubGist();
 
     await this._download();
 
