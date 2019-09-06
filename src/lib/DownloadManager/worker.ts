@@ -49,6 +49,7 @@ async function doGenerics (urls: string[]) {
 
   if (existingFiles.length)
     urls = urls.filter(e => !existingFiles.find(m => m.filename === e.split('/').pop()));
+  if (!urls.length) return true;
 
   for (const url of urls) {
     const name = url.split('/').pop();
