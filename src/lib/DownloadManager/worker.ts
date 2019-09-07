@@ -90,7 +90,6 @@ async function doSpecifics (chars: ICharacter[]) {
 
     for (const resource of char.resources) {
       const [ key, { urls, hash } ] = resource;
-      const fileNames: string[] = [];
       const zip = new Zip();
       let current = 1;
 
@@ -146,18 +145,9 @@ async function doSpecifics (chars: ICharacter[]) {
           parentPort.postMessage('errored');
           log.error(`[${char.id}]\n  [${url}]\n  ${f.stack || f}`);
         }
-
-        fileNames.push(name);
       }
 
       try {
-        const fileNamesPath = `${auth.destinations.scenarios}${char.id}/${key}/`;
-
-        await ssh.exec(`mkdir -p ${fileNamesPath}`);
-        // @ts-ignore
-        await sftp.writeFile(`${fileNamesPath}files.rsc`, fileNames.join(','));
-        log.info(`Written ${key}'s files.rsc to server`);
-
         if (Object.keys(zip.files).length) {
           const zipBuffer = await zip.generateAsync({
             type: 'nodebuffer',

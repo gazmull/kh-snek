@@ -77,7 +77,8 @@ export default class Extractor {
     ssh.close();
     this.logger.info('Closed SSH connection. (Not necessary anymore)');
 
-    await this._download();
+    if (!process.argv.includes('--nodl'))
+      await this._download();
 
     this.logger.info([
       // tslint:disable-next-line: max-line-length
@@ -433,12 +434,14 @@ export default class Extractor {
     { id: string, resource: string, script: IScenarioSequence[], folder: string }
   ) {
     const lines = [];
+    const fileNames: string[] = [];
 
     for (const entry of script) {
       const entryData = {};
 
       if (entry.bgm) {
         this.miscFiles.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${entry.bgm}`);
+        fileNames.push(entry.bgm);
 
         Object.assign(entryData, { bgm: entry.bgm });
       }
@@ -448,6 +451,8 @@ export default class Extractor {
 
         if (![ 'black.jpg', 'pink_s.jpg' ].includes(entry.film))
           this.files(id, resource).urls.push(url);
+
+        fileNames.push(entry.film);
 
         const fps = Number(entry.fps);
 
@@ -465,6 +470,8 @@ export default class Extractor {
 
         if (line.hasOwnProperty('voice')) {
           this.files(id, resource).urls.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${line.voice}`);
+
+          fileNames.push(line.voice);
 
           if (line.voice.length)
             Object.assign(talkEntry, { voice: line.voice });
@@ -496,11 +503,13 @@ export default class Extractor {
       lines.push(entryData);
     }
 
-    const scriptPath = `${this.base.DESTINATION.EPISODES}${id}/${resource}/`;
+    const path = `${this.base.DESTINATION.EPISODES}${id}/${resource}/`;
 
-    await ssh.exec(`mkdir -p ${scriptPath}`);
+    await ssh.exec(`mkdir -p ${path}`);
     // @ts-ignore
-    await sftp.writeFile(scriptPath + 'script.json', JSON.stringify({ scenario: lines }));
+    await sftp.writeFile(path + 'script.json', JSON.stringify({ scenario: lines }));
+    // @ts-ignore
+    await sftp.writeFile(path + 'files.rsc', fileNames.join(','));
 
     return true;
   }
