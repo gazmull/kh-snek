@@ -449,10 +449,10 @@ export default class Extractor {
       if (entry.film) {
         const url = `${this.base.URL.SCENARIOS}${folder}${resource}/${entry.film}`;
 
-        if (![ 'black.jpg', 'pink_s.jpg' ].includes(entry.film))
+        if (![ 'black.jpg', 'pink_s.jpg' ].includes(entry.film)) {
           this.files(id, resource).urls.push(url);
-
-        fileNames.push(entry.film);
+          fileNames.push(entry.film);
+        }
 
         const fps = Number(entry.fps);
 
@@ -470,7 +470,6 @@ export default class Extractor {
 
         if (line.hasOwnProperty('voice')) {
           this.files(id, resource).urls.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${line.voice}`);
-
           fileNames.push(line.voice);
 
           if (line.voice.length)
