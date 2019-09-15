@@ -295,7 +295,7 @@ export default class Extractor {
         switch (attribute.command) {
           case 'chara_new': {
             const url = this.base.URL.FG_IMAGE + attribute.storage;
-            const blacklisted = this.blacklist.includes(attribute.storage);
+            const blacklisted = this.blacklisted(attribute.storage);
 
             if (!blacklisted && !this.miscFiles.includes(url))
               this.miscFiles.push(url);
@@ -306,7 +306,7 @@ export default class Extractor {
 
           case 'chara_face': {
             const url = this.base.URL.FG_IMAGE + attribute.storage;
-            const blacklisted = this.blacklist.includes(attribute.storage);
+            const blacklisted = this.blacklisted(attribute.storage);
 
             if (!blacklisted && !this.miscFiles.includes(url))
               this.miscFiles.push(url);
@@ -440,8 +440,10 @@ export default class Extractor {
       const entryData = {};
 
       if (entry.bgm) {
-        this.miscFiles.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${entry.bgm}`);
-        fileNames.push(entry.bgm);
+        if (!this.blacklisted(entry.bgm)) {
+          this.miscFiles.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${entry.bgm}`);
+          fileNames.push(entry.bgm);
+        }
 
         Object.assign(entryData, { bgm: entry.bgm });
       }
@@ -449,7 +451,7 @@ export default class Extractor {
       if (entry.film) {
         const url = `${this.base.URL.SCENARIOS}${folder}${resource}/${entry.film}`;
 
-        if (![ 'black.jpg', 'pink_s.jpg' ].includes(entry.film)) {
+        if (!this.blacklisted(entry.film) && ![ 'black.jpg', 'pink_s.jpg' ].includes(entry.film)) {
           this.files(id, resource).urls.push(url);
           fileNames.push(entry.film);
         }
@@ -469,8 +471,10 @@ export default class Extractor {
         const talkEntry = {};
 
         if (line.hasOwnProperty('voice')) {
-          this.files(id, resource).urls.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${line.voice}`);
-          fileNames.push(line.voice);
+          if (!this.blacklisted(line.voice)) {
+            this.files(id, resource).urls.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${line.voice}`);
+            fileNames.push(line.voice);
+          }
 
           if (line.voice.length)
             Object.assign(talkEntry, { voice: line.voice });
@@ -511,5 +515,9 @@ export default class Extractor {
     await sftp.writeFile(path + 'files.rsc', fileNames.join(','));
 
     return true;
+  }
+
+  private blacklisted (filename: string) {
+    return this.blacklist.includes(filename);
   }
 }
