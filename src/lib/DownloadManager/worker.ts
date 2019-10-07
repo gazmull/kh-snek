@@ -8,6 +8,7 @@ import { Auth } from '../../../typings/auth';
 import { downloadManagerData, ICharacter } from '../../../typings/index';
 import Downloader from '../Downloader';
 import ImageProcessor from '../ImageProcessor';
+import { parseArg } from '../Util';
 
 // tslint:disable:no-var-requires
 
@@ -44,12 +45,16 @@ async function start (data: downloadManagerData) {
 async function doGenerics (urls: string[]) {
   let current = 1;
   const dirName = `${auth.destinations.scenarios}misc/`;
-  const existingFiles = (await sftp.readdir(dirName).catch(() => []) as Array<{ filename: string }>)
-    .filter(e => e && e.filename && !e.filename.endsWith('.webp'));
+  const forced = parseArg([ '-g', '--generics', '-f', '--force' ]);
 
-  if (existingFiles.length)
-    urls = urls.filter(e => !existingFiles.find(m => m.filename === e.split('/').pop()));
-  if (!urls.length) return true;
+  if (!forced) {
+    const existingFiles = (await sftp.readdir(dirName).catch(() => []) as Array<{ filename: string }>)
+      .filter(e => e && e.filename && !e.filename.endsWith('.webp'));
+
+    if (existingFiles.length)
+      urls = urls.filter(e => !existingFiles.find(m => m.filename === e.split('/').pop()));
+    if (!urls.length) return true;
+  }
 
   for (const url of urls) {
     const name = url.split('/').pop();
