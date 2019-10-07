@@ -6,6 +6,7 @@ import { Config as Database } from 'knex';
 import { ICharacter } from '../typings';
 import { Directories, KamihimeGrant } from '../typings/auth';
 import Extractor from './lib/Extractor';
+import { parseArg } from './lib/Util';
 
 // tslint:disable-next-line:no-var-requires
 const { database, destinations }: { database: Database, destinations: Directories } = require('../auth');
@@ -150,8 +151,4 @@ export default async function start () {
 
     process.exit(code);
   }
-}
-
-function parseArg (args: string[]) {
-  return process.argv.find(el => args.some(f => new RegExp(`^${f}`, 'i').test(el)));
 }
