@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 import SSH2Promise from 'ssh2-promise';
 import SFTP from 'ssh2-promise/dist/sftp'; // Need to fork this to update wrong types
 import { Logger } from 'winston';
-import { IExtractorOptions, IScenarioSequence } from '../../typings';
+import { ICharacter, IExtractorOptions, IScenarioSequence } from '../../typings';
 import Downloader from './Downloader';
 import DownloadManager from './DownloadManager';
 import GithubGist from './GithubGist';
@@ -74,8 +74,13 @@ export default class Extractor {
     ssh.close();
     this.logger.info('Closed SSH connection. (Not necessary anymore)');
 
-    if (!process.argv.includes('--nodl'))
-      await this._download();
+    if (!process.argv.includes('--nodl')) {
+      const genericsOnly = Boolean(
+        process.argv.find(el => [ '-g', '--generics' ].some(f => new RegExp(`^${f}`, 'i').test(el)))
+      );
+
+      await this._download(genericsOnly);
+    }
 
     this.logger.info([
       // tslint:disable-next-line: max-line-length
@@ -180,8 +185,13 @@ export default class Extractor {
     return Object.values(result);
   }
 
-  private async _download () {
-    for (const arr of [ this.miscFiles, this.base.characters ])
+  private async _download (genericsOnly: boolean) {
+    const toDownload: Array<string[] | ICharacter[]> = [ this.miscFiles ];
+
+    if (!genericsOnly)
+      toDownload.push(this.base.characters);
+
+    for (const arr of toDownload)
       try {
         const managerKun = new DownloadManager(arr);
         const instances = await managerKun.araAra();

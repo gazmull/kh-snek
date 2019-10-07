@@ -52,8 +52,12 @@ export default async function start () {
     logger.warn('You are about to get yeeted. Goodluck!');
 
     let query = Knex(database)('kamihime').select([ 'id', 'name', 'rarity' ])
-      .where('approved', 1)
-      .andWhere('harem1Resource1', null);
+      .where('approved', 1);
+
+    const genericsOnly = process.argv.find(el => [ '-g', '--generics' ].some(f => new RegExp(`^${f}`, 'i').test(el)));
+
+    if (!genericsOnly)
+      query = query.andWhere('harem1Resource1', null);
 
     const latest = process.argv.find(el => [ '-l', '--latest=' ].some(f => new RegExp(`^${f}`, 'i').test(el)));
     const id = process.argv.find(el => [ '-i', '--id=' ].some(f => new RegExp(`^${f}`, 'i').test(el)));
