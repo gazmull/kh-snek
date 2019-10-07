@@ -54,19 +54,20 @@ export default async function start () {
     let query = Knex(database)('kamihime').select([ 'id', 'name', 'rarity' ])
       .where('approved', 1);
 
-    const genericsOnly = process.argv.find(el => [ '-g', '--generics' ].some(f => new RegExp(`^${f}`, 'i').test(el)));
+    const genericsOnly = parseArg([ '-g', '--generics' ]);
+    const forcedDownload = parseArg([ '-f', '--force' ]);
 
-    if (!genericsOnly)
+    if (!genericsOnly && !forcedDownload)
       query = query.andWhere('harem1Resource1', null);
 
-    const latest = process.argv.find(el => [ '-l', '--latest=' ].some(f => new RegExp(`^${f}`, 'i').test(el)));
-    const id = process.argv.find(el => [ '-i', '--id=' ].some(f => new RegExp(`^${f}`, 'i').test(el)));
-    const type = process.argv.find(el =>
+    const latest = parseArg([ '-l', '--latest=' ]);
+    const id = parseArg([ '-i', '--id=' ]);
+    const type = parseArg(
       [
         '--eidolon',
         '--soul',
         '--ssr+', '--ssr', '--sr', '--r',
-      ].some(f => new RegExp(`^${f}`, 'i').test(el))
+      ]
     );
 
     if (latest && id) throw new Error('Latest and ID cannot be invoked at the same time.');
@@ -95,13 +96,13 @@ export default async function start () {
       const _type = type.slice(2);
 
       switch (_type) {
-        case 'eidolon': query = query.andWhereRaw('id LIKE \'e%\' AND approved=1'); break;
-        case 'soul': query = query.andWhereRaw('id LIKE \'s%\' AND approved=1'); break;
+        case 'eidolon': query = query.andWhereRaw('id LIKE \'e%\''); break;
+        case 'soul': query = query.andWhereRaw('id LIKE \'s%\''); break;
         case 'ssr+':
         case 'ssr':
         case 'sr':
         case 'r':
-          query = query.andWhereRaw(`id LIKE 'k%' AND rarity='${_type.toUpperCase()}' AND approved=1`);
+          query = query.andWhereRaw(`id LIKE 'k%' AND rarity='${_type.toUpperCase()}'`);
           break;
       }
     }
@@ -149,4 +150,8 @@ export default async function start () {
 
     process.exit(code);
   }
+}
+
+function parseArg (args: string[]) {
+  return process.argv.find(el => args.some(f => new RegExp(`^${f}`, 'i').test(el)));
 }
