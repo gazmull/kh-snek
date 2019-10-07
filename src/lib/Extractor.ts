@@ -31,8 +31,6 @@ export default class Extractor {
 
     this.resourcesFound = 0;
 
-    this.filesFound = 0;
-
     this.error = false;
 
     headers.Cookie = `XSRF-TOKEN=${options.grant.xsrf};session=${options.grant.session}`;
@@ -44,7 +42,6 @@ export default class Extractor {
   public blacklist: string[];
   public resourcesExtracted: number;
   public resourcesFound: number;
-  public filesFound: number;
   public error: boolean;
   public logger: Logger;
   public verbose: boolean;
@@ -83,7 +80,6 @@ export default class Extractor {
     this.logger.info([
       // tslint:disable-next-line: max-line-length
       `Extracted ${this.resourcesExtracted} resources from ${this.base.characters.length} characters. (Expected: ${this.resourcesFound})`,
-      `Files Found: ${this.filesFound}`,
       this.error
         ? [
           'I have detected some errors during the process.',
