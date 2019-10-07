@@ -3,7 +3,7 @@ import * as gm from 'gm';
 const im = gm.subClass({ imageMagick: true });
 
 export default class ImageProcessor {
-  public async toWebpBuffer (buffer: Buffer) {
+  public static async toWebpBuffer (buffer: Buffer) {
     const img = im(buffer)
       .quality(70)
       .define('webp:method=6')
@@ -12,7 +12,7 @@ export default class ImageProcessor {
     return this.toBuffer(img);
   }
 
-  public toBuffer (img: gm.State): Promise<Buffer> {
+  public static toBuffer (img: gm.State): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       img.toBuffer((err, buffer) => {
         if (err)
@@ -23,14 +23,14 @@ export default class ImageProcessor {
     });
   }
 
-  public async rotate (buffer: Buffer) {
+  public static async rotate (buffer: Buffer) {
     const img = im(buffer)
       .out('-rotate', '-90<');
 
     return this.toBuffer(img);
   }
 
-  public async animate (buffer: Buffer, options: IAnimateOptions) {
+  public static async animate (buffer: Buffer, options: IAnimateOptions) {
     const img = im(buffer)
       .in('-delay', String(options.delay))
       .out('-rotate', '-90<')
@@ -44,7 +44,7 @@ export default class ImageProcessor {
     return this.toBuffer(img);
   }
 
-  public async optimiseAnimation (buffer: Buffer) {
+  public static async optimiseAnimation (buffer: Buffer) {
     const img = im(buffer)
       .out('-fuzz', '3%')
       .out('-layers', 'OptimizeTransparency');

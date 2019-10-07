@@ -2,7 +2,7 @@ import Collection from 'collection';
 import * as OS from 'os';
 import * as path from 'path';
 import { Worker } from 'worker_threads';
-import { downloadManagerData, ICharacter } from '../../../typings';
+import { downloadManagerData, ICharacter } from '../../../../typings';
 
 export default class DownloadManager {
 

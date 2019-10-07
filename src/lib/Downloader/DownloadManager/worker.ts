@@ -4,11 +4,11 @@ import Knex from 'knex';
 import SSH2Promise from 'ssh2-promise';
 import SFTP from 'ssh2-promise/dist/sftp'; // Need to fork this to update wrong types
 import { parentPort } from 'worker_threads';
-import { Auth } from '../../../typings/auth';
-import { downloadManagerData, ICharacter } from '../../../typings/index';
-import Downloader from '../Downloader';
-import ImageProcessor from '../ImageProcessor';
-import { parseArg } from '../Util';
+import Downloader from '..';
+import { Auth } from '../../../../typings/auth';
+import { downloadManagerData, ICharacter } from '../../../../typings/index';
+import ImageProcessor from '../../ImageProcessor';
+import { parseArg } from '../../Util';
 
 // tslint:disable:no-var-requires
 
@@ -17,7 +17,6 @@ const { workerData }:
 const auth: Auth = require('../../../auth');
 const ssh = new SSH2Promise(auth.ssh);
 let sftp: SFTP;
-const convert = new ImageProcessor();
 const logger = new Winston(`worker.${workerData.id}`).logger;
 const log = {
   info: (msg: string) => logger.info(`[worker-${workerData.id}]: ${msg}`),
@@ -72,7 +71,7 @@ async function doGenerics (urls: string[]) {
       log.info(`Written ${name} to server`);
 
       if (/\.(?:jpe?g|png)$/.test(name)) {
-        const webpBuffer = await convert.toWebpBuffer(fileBuffer);
+        const webpBuffer = await ImageProcessor.toWebpBuffer(fileBuffer);
 
         // @ts-ignore
         await sftp.writeFile(`${filePath}.webp`, webpBuffer, 'binary');
@@ -117,7 +116,7 @@ async function doSpecifics (chars: ICharacter[]) {
           log.info(`Written ${name} to server`);
 
           if (/\.(?:jpe?g|png)$/.test(name)) {
-            const webpBuffer = await convert.toWebpBuffer(fileBuffer);
+            const webpBuffer = await ImageProcessor.toWebpBuffer(fileBuffer);
 
             // @ts-ignore
             await sftp.writeFile(`${filePath}.webp`, webpBuffer, 'binary');
@@ -130,15 +129,15 @@ async function doSpecifics (chars: ICharacter[]) {
               .replace(/^.+_/, '');
 
             if ([ 'a', 'd' ].includes(stripVariant))
-              processedImage = await convert.rotate(fileBuffer);
+              processedImage = await ImageProcessor.rotate(fileBuffer);
             else {
               const delay = stripVariant === 'b'
                 ? 6
                 : [ 'c1', 'c2' ].includes(stripVariant)
                   ? 4
                   : 12;
-              processedImage = await convert.animate(fileBuffer, { delay });
-              processedImage = await convert.optimiseAnimation(processedImage);
+              processedImage = await ImageProcessor.animate(fileBuffer, { delay });
+              processedImage = await ImageProcessor.optimiseAnimation(processedImage);
               fileName = name.replace(/\.\w+$/, '.gif');
             }
 

@@ -5,8 +5,8 @@ import SFTP from 'ssh2-promise/dist/sftp'; // Need to fork this to update wrong 
 import { Logger } from 'winston';
 import { ICharacter, IExtractorOptions, IScenarioSequence } from '../../typings';
 import Downloader from './Downloader';
-import DownloadManager from './DownloadManager';
-import GithubGist from './GithubGist';
+import DownloadManager from './Downloader/DownloadManager';
+import { getBlacklist } from './Util';
 
 // tslint:disable-next-line:no-var-requires
 const ssh = new SSH2Promise(require('../../auth').ssh);
@@ -59,7 +59,7 @@ export default class Extractor {
       this.logger.info('Connected to remote server via SSH.');
     } catch (err) { throw new Error(err); }
 
-    this.blacklist = await GithubGist();
+    this.blacklist = await getBlacklist();
 
     for (const character of this.base.characters) {
       const { id } = character;
