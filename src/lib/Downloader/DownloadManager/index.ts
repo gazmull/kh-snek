@@ -1,4 +1,4 @@
-import Collection from 'collection';
+import Collection from '@discordjs/collection';
 import * as OS from 'os';
 import * as path from 'path';
 import { Worker } from 'worker_threads';

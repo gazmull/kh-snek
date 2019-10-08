@@ -2,7 +2,7 @@ import { Logger } from 'winston';
 import { KamihimeGrant } from './auth';
 import SSH2Promise from 'ssh2-promise';
 import SFTP from 'ssh2-promise/dist/sftp';
-import Collection from 'collection';
+import Collection from '@discordjs/collection';
 
 export interface IExtractorOptions {
   logger: Logger;

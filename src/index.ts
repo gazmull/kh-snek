@@ -1,5 +1,5 @@
+import Collection from '@discordjs/collection';
 import Winston from '@gazmull/logger';
-import Collection from 'collection';
 import { prompt } from 'inquirer';
 import Knex from 'knex';
 import { Config as Database } from 'knex';

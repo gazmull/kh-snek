@@ -22,7 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "@gazmull/logger": "github:gazmull/logger",
-    "collection": "github:discordjs/collection",
+    "@discordjs/collection": "0.1.3",
     "fs-extra": "^8.1.0",
     "gm": "^1.23.1",
     "inquirer": "^7.0.0",
