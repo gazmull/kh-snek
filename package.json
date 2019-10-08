@@ -27,7 +27,7 @@
     "gm": "^1.23.1",
     "inquirer": "^7.0.0",
     "jszip": "^3.2.2",
-    "knex": "^0.19.3",
+    "knex": "^0.19.5",
     "mysql2": "^1.7.0",
     "node-fetch": "^2.6.0",
     "ssh2-promise": "^0.1.5"
@@ -37,13 +37,13 @@
     "@types/gm": "^1.18.4",
     "@types/inquirer": "^6.5.0",
     "@types/jszip": "^3.1.6",
-    "@types/node": "^12.7.3",
-    "@types/node-fetch": "^2.5.0",
+    "@types/node": "^12.7.11",
+    "@types/node-fetch": "^2.5.2",
     "gulp": "^4.0.2",
     "gulp-tslint": "^8.1.4",
     "gulp-typescript": "^5.0.1",
-    "tslint": "^5.19.0",
+    "tslint": "^5.20.0",
     "tslint-eslint-rules": "^5.4.0",
-    "typescript": "^3.6.2"
+    "typescript": "^3.6.3"
   }
 }

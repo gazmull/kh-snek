@@ -17,22 +17,17 @@ const { workerData }:
 const auth: Auth = require('../../../../auth');
 const ssh = new SSH2Promise(auth.ssh);
 let sftp: SFTP;
-const logger = new Winston(`worker.${workerData.id}`).logger;
-const log = {
-  info: (msg: string) => logger.info(`[worker-${workerData.id}]: ${msg}`),
-  warn: (msg: string) => logger.warn(`[worker-${workerData.id}]: ${msg}`),
-  error: (msg: string) => logger.error(`[worker-${workerData.id}]: ${msg}`)
-};
+const logger = new Winston(`worker.${workerData.id}`, `[worker-${workerData.id}]`).logger;
 
 // tslint:enable:no-var-requires
 
 async function start (data: downloadManagerData) {
   try {
-    log.info('connecting to remote server...');
+    logger.info('connecting to remote server...');
     await ssh.connect();
     sftp = ssh.sftp();
 
-    log.info('connected to remote server');
+    logger.info('connected to remote server');
 
     if (typeof data[0] === 'string') await doGenerics(data as string[]);
     else await doSpecifics(data as ICharacter[]);
@@ -59,7 +54,7 @@ async function doGenerics (urls: string[]) {
     const name = url.split('/').pop();
     const file = new Downloader({ url });
 
-    log.info(`Downloading Story generics... [${current} / ${urls.length}]`);
+    logger.info(`Downloading Story generics... [${current} / ${urls.length}]`);
 
     try {
       const fileBuffer = await file.download(true) as Buffer;
@@ -68,20 +63,20 @@ async function doGenerics (urls: string[]) {
       await ssh.exec(`mkdir -p ${dirName}`);
       // @ts-ignore
       await sftp.writeFile(filePath, fileBuffer, 'binary');
-      log.info(`Written ${name} to server`);
+      logger.info(`Written ${name} to server`);
 
       if (/\.(?:jpe?g|png)$/.test(name)) {
         const webpBuffer = await ImageProcessor.toWebpBuffer(fileBuffer);
 
         // @ts-ignore
         await sftp.writeFile(`${filePath}.webp`, webpBuffer, 'binary');
-        log.info(`Written ${name}.webp to server`);
+        logger.info(`Written ${name}.webp to server`);
       }
 
       current++;
     } catch (f) {
       parentPort.postMessage('errored');
-      log.error(`[GENERICS]\n  [${url}]\n  ${f.stack || f}`);
+      logger.error(`[GENERICS]\n  [${url}]\n  ${f.stack || f}`);
     }
   }
 
@@ -90,14 +85,14 @@ async function doGenerics (urls: string[]) {
 
 async function doSpecifics (chars: ICharacter[]) {
   for (const char of chars) {
-    log.info(`Downloading Specific assets for ${char.id}...`);
+    logger.info(`Downloading Specific assets for ${char.id}...`);
 
     for (const resource of char.resources) {
       const [ key, { urls, hash } ] = resource;
       const zip = new Zip();
       let current = 1;
 
-      log.info(`Downloading ${key} Specific assets...`);
+      logger.info(`Downloading ${key} Specific assets...`);
 
       for (const url of urls) {
         const destination = `${auth.destinations.scenarios}${char.id}/${hash}/`;
@@ -105,7 +100,7 @@ async function doSpecifics (chars: ICharacter[]) {
         const file = new Downloader({ url });
         const filePath = `${destination}${name}`;
 
-        log.info(`Downloading Specific assets ${char.id}... [${current} / ${urls.length}]`);
+        logger.info(`Downloading Specific assets ${char.id}... [${current} / ${urls.length}]`);
 
         try {
           const fileBuffer = await file.download(true) as Buffer;
@@ -113,14 +108,14 @@ async function doSpecifics (chars: ICharacter[]) {
           await ssh.exec(`mkdir -p ${destination}`);
           // @ts-ignore
           await sftp.writeFile(filePath, fileBuffer, 'binary');
-          log.info(`Written ${name} to server`);
+          logger.info(`Written ${name} to server`);
 
           if (/\.(?:jpe?g|png)$/.test(name)) {
             const webpBuffer = await ImageProcessor.toWebpBuffer(fileBuffer);
 
             // @ts-ignore
             await sftp.writeFile(`${filePath}.webp`, webpBuffer, 'binary');
-            log.info(`Written ${name}.webp to server`);
+            logger.info(`Written ${name}.webp to server`);
 
             let processedImage: Buffer;
             let fileName = name;
@@ -147,7 +142,7 @@ async function doSpecifics (chars: ICharacter[]) {
           current++;
         } catch (f) {
           parentPort.postMessage('errored');
-          log.error(`[${char.id}]\n  [${url}]\n  ${f.stack || f}`);
+          logger.error(`[${char.id}]\n  [${url}]\n  ${f.stack || f}`);
         }
       }
 
@@ -165,15 +160,15 @@ async function doSpecifics (chars: ICharacter[]) {
           await ssh.exec(`mkdir -p ${zipPath}`);
           // @ts-ignore
           await sftp.writeFile(`${zipPath}${zipName}`, zipBuffer);
-          log.info(`Written ${zipName} to server`);
+          logger.info(`Written ${zipName} to server`);
         } else
-          log.warn(`Ignored Zip operation: not h_anime (${char.id}'s ${key})`);
+          logger.warn(`Ignored Zip operation: not h_anime (${char.id}'s ${key})`);
 
         await Knex(auth.database)('kamihime').update({ [key]: hash }).where('id', char.id);
-        log.info(`Saved ${char.id}'s ${key} hash to DB`); // test this
+        logger.info(`Saved ${char.id}'s ${key} hash to DB`); // test this
       } catch (f) {
         parentPort.postMessage('errored');
-        log.error(`[${char.id}] [${key}]\n ${f.stack || f}`);
+        logger.error(`[${char.id}] [${key}]\n ${f.stack || f}`);
       }
     }
   }
