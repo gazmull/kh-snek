@@ -14,7 +14,7 @@ import { parseArg } from '../../Util';
 
 const { workerData }:
   { workerData: { id: number, downloads: downloadManagerData } } = require('worker_threads');
-const auth: Auth = require('../../../auth');
+const auth: Auth = require('../../../../auth');
 const ssh = new SSH2Promise(auth.ssh);
 let sftp: SFTP;
 const logger = new Winston(`worker.${workerData.id}`).logger;
