@@ -92,7 +92,8 @@ async function doSpecifics (chars: ICharacter[]) {
 
       logger.info(`Downloading ${key} Specific assets...`);
 
-      for (const url of urls) {
+      for (let url of urls) {
+        url = url.trim();
         const destination = `${auth.destinations.scenarios}${char.id}/${hash}/`;
         const name = url.split('/').pop();
         const file = new Downloader({ url });
