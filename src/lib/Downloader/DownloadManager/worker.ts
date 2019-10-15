@@ -8,12 +8,11 @@ import Downloader from '..';
 import { Auth } from '../../../../typings/auth';
 import { downloadManagerData, ICharacter } from '../../../../typings/index';
 import ImageProcessor from '../../ImageProcessor';
-import { parseArg } from '../../Util';
 
 // tslint:disable:no-var-requires
 
 const { workerData }:
-  { workerData: { id: number, downloads: downloadManagerData } } = require('worker_threads');
+  { workerData: { id: number, downloads: downloadManagerData, forced: boolean } } = require('worker_threads');
 const auth: Auth = require('../../../../auth');
 const ssh = new SSH2Promise(auth.ssh);
 let sftp: SFTP;
@@ -39,9 +38,8 @@ async function start (data: downloadManagerData) {
 async function doGenerics (urls: string[]) {
   let current = 1;
   const dirName = `${auth.destinations.scenarios}misc/`;
-  const forced = parseArg([ '-g', '--generics', '-f', '--force' ]);
 
-  if (!forced) {
+  if (!workerData.forced) {
     const existingFiles = (await sftp.readdir(dirName).catch(() => []) as Array<{ filename: string }>)
       .filter(e => e && e.filename && !e.filename.endsWith('.webp'));
 

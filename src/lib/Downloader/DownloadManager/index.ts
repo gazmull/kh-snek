@@ -3,6 +3,7 @@ import * as OS from 'os';
 import * as path from 'path';
 import { Worker } from 'worker_threads';
 import { downloadManagerData, ICharacter } from '../../../../typings';
+import { parseArg } from '../../Util';
 
 export default class DownloadManager {
 
@@ -66,7 +67,7 @@ export default class DownloadManager {
 
   private _spawnWorker (id: number, downloads: downloadManagerData): Promise<string | Error> {
     return new Promise(resolve => {
-      const workerData = { id, downloads };
+      const workerData = { id, downloads, forced: parseArg([ '-g', '--generics', '-f', '--force' ]) };
       const worker = new Worker(path.join(__dirname, 'worker.js'), { workerData });
       let errored = false;
 
