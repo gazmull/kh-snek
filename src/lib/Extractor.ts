@@ -6,7 +6,7 @@ import { Logger } from 'winston';
 import { ICharacter, IExtractorOptions, IScenarioSequence } from '../../typings';
 import Downloader from './Downloader';
 import DownloadManager from './Downloader/DownloadManager';
-import { getBlacklist } from './Util';
+import { getBlacklist, parseArg } from './Util';
 
 // tslint:disable-next-line:no-var-requires
 const ssh = new SSH2Promise(require('../../auth').ssh);
@@ -111,7 +111,7 @@ export default class Extractor {
       const url = this.base.URL[id.startsWith('e') ? 'EIDOLONS' : 'KAMIHIMES'].SCENES + id.slice(1);
       const request = await fetch(url, { headers });
 
-      if (!request.ok) throw new Error(`Received HTTP status: ${request.status}`);
+      if (!request.ok) throw new Error(`Received HTTP status: ${request.status} (${id})`);
 
       const json = await request.json();
 
@@ -142,21 +142,26 @@ export default class Extractor {
     if (!episodeId) {
       const predicted = Number(id.slice(1)) * 2;
       episodes = [ predicted - 1, predicted ];
-    } else if ([ 'SSR+', 'R' ].includes(this.base.characters.find(i => i.id === id).rarity) || id.startsWith('e'))
+    }
+    // -- For characters with no hentai (e.g. Haruhi Suzumiya)
+    else if (parseArg([ '--nohentai' ]))
+      episodes = [ episodeId, episodeId + 1 ];
+    else if ([ 'SSR+', 'R' ].includes(this.base.characters.find(i => i.id === id).rarity) || id.startsWith('e'))
       episodes = [ episodeId - 1, episodeId ];
     else
       episodes = [ episodeId - 1, episodeId, episodeId + 1 ];
 
     for (const episode of episodes)
       try {
+        const fileName = `_harem-${id.startsWith('s') ? 'job' : id.startsWith('e') ? 'summon' : 'character'}`;
         const url = [
           this.base.URL.EPISODES,
           episode,
-          `_harem-${id.startsWith('s') ? 'job' : id.startsWith('e') ? 'summon' : 'character'}`,
+          fileName,
         ].join('');
         const request = await fetch(url, { headers });
 
-        if (!request.ok) throw new Error(`Received HTTP status: ${request.status}`);
+        if (!request.ok) throw new Error(`Received HTTP status: ${request.status} (${id} - ${fileName})`);
 
         const json = await request.json();
 
@@ -164,7 +169,10 @@ export default class Extractor {
 
         const { scenarios, harem_scenes: scenes } = json.chapters[0];
 
-        if (!scenes) result.harem1Resource1 = scenarios[0].resource_directory;
+        if (!scenes && !episodes.indexOf(episode))
+          result.harem1Resource1 = scenarios[0].resource_directory;
+        else if (!scenes && episodes.indexOf(episode) === 1)
+          result.harem2Resource1 = scenarios[0].resource_directory;
         else if (scenes && episodes.indexOf(episode) === 1) {
           result.harem2Resource1 = scenarios[0].resource_directory;
           result.harem2Resource2 = scenes[0].resource_directory;
@@ -360,7 +368,12 @@ export default class Extractor {
           }
 
           case 'playse': {
-            const isGetIntro = [ 'h_get', 'h_intro' ].some(i => attribute.storage && attribute.storage.startsWith(i));
+            const isGetIntro = [
+              'h_get',
+              'h_intro',
+              'h_ep1',
+              'h_ep2',
+            ].some(i => attribute.storage && attribute.storage.startsWith(i));
 
             if (!isGetIntro) continue;
 
