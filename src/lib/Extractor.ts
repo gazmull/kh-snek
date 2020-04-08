@@ -140,8 +140,11 @@ export default class Extractor {
 
     // -- If empty episodeId, it assumes passed ID is a soul's ID
     if (!episodeId) {
-      const predicted = Number(id.slice(1)) * 2;
-      episodes = [ predicted - 1, predicted ];
+      const pId = Number(id.slice(1));
+      const isT4 = pId >= 31;
+      const predicted = pId * (isT4 ? 100 : 2);
+
+      episodes = [ predicted + (isT4 ? 1 : -1), predicted + (isT4 ? 2 : 0) ];
     }
     // -- For characters with no hentai (e.g. Haruhi Suzumiya)
     else if (parseArg([ '--nohentai' ]))
