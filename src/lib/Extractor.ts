@@ -14,7 +14,7 @@ let sftp: SFTP;
 
 const headers = {
   'User-Agent': Downloader.headers['user-agent'],
-  Cookie: ''
+  'x-kh-session': ''
 };
 
 export default class Extractor {
@@ -33,7 +33,7 @@ export default class Extractor {
 
     this.error = false;
 
-    headers.Cookie = `XSRF-TOKEN=${options.grant.xsrf};session=${options.grant.session}`;
+    headers['x-kh-session'] = options.session;
   }
 
   public base: IExtractorOptions['base'];

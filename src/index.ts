@@ -4,16 +4,12 @@ import { prompt } from 'inquirer';
 import Knex from 'knex';
 import { Config as Database } from 'knex';
 import { ICharacter } from '../typings';
-import { Directories, KamihimeGrant } from '../typings/auth';
+import { Directories } from '../typings/auth';
 import Extractor from './lib/Extractor';
 import { parseArg } from './lib/Util';
 
 // tslint:disable-next-line:no-var-requires
 const { database, destinations }: { database: Database, destinations: Directories } = require('../auth');
-const grant: KamihimeGrant = {
-  xsrf: '',
-  session: ''
-};
 
 let code = 0;
 const logger = new Winston('snek').logger;
@@ -26,20 +22,10 @@ export default async function start () {
 
     const answers = await prompt([
       {
-        name: 'xsrf',
-        message: 'XSRF Token',
-        validate: input => {
-          if (!input)
-            return 'You cannot skip this. Try again';
-
-          return true;
-        }
-      },
-      {
         name: 'session',
         message: 'Session Token',
-        validate: input => {
-          if (!input)
+        validate: (input: string) => {
+          if (!input.trim())
             return 'You cannot skip this. Try again';
 
           return true;
@@ -47,8 +33,7 @@ export default async function start () {
       },
     ]);
 
-    grant.xsrf = answers.xsrf;
-    grant.session = answers.session;
+    const session = answers.session;
 
     logger.warn('You are about to get yeeted. Goodluck!');
 
@@ -117,7 +102,7 @@ export default async function start () {
 
     await new Extractor({
       logger,
-      grant,
+      session,
       base: {
         characters,
         DESTINATION: {
