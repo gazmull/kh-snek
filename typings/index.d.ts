@@ -7,8 +7,17 @@ import Collection from '@discordjs/collection';
 export interface IExtractorOptions {
   logger: Logger;
   grant: KamihimeGrant;
+  flags: {
+    digMode: boolean;
+    forced: boolean;
+    genericsOnly: boolean;
+    noHentai: boolean;
+    noWEBP: boolean;
+    sceneInfoOnly: boolean;
+  }
   base: {
     characters: ICharacter[];
+    BLOWFISH_KEY: string;
     DESTINATION: {
       MISC: string;
       EPISODES: string;

@@ -3,7 +3,7 @@ import Winston from '@gazmull/logger';
 import { prompt } from 'inquirer';
 import Knex from 'knex';
 import { Config as Database } from 'knex';
-import { ICharacter } from '../typings';
+import { ICharacter, IExtractorOptions } from '../typings';
 import { Directories, KamihimeGrant } from '../typings/auth';
 import Extractor from './lib/Extractor';
 import { parseArg } from './lib/Util';
@@ -24,42 +24,47 @@ export default async function start () {
   try {
     logger.warn('kh-snek started...');
 
-    const answers = await prompt([
-      {
-        name: 'xsrf',
-        message: 'XSRF Token',
-        validate: input => {
-          if (!input)
-            return 'You cannot skip this. Try again';
+    const boolFlags = (flags: string[]) => Boolean(parseArg(flags));
+    const flags: IExtractorOptions['flags'] = {
+      digMode: boolFlags([ '-d', '--dig' ]),
+      forced: boolFlags([ '-f', '--force' ]),
+      genericsOnly: boolFlags([ '-g', '--generics' ]),
+      noHentai: boolFlags([ '--nohentai' ]),
+      noWEBP: boolFlags([ '--nowebp' ]),
+      sceneInfoOnly: boolFlags([ '--nodl' ])
+    };
 
-          return true;
-        }
-      },
-      {
-        name: 'session',
-        message: 'Session Token',
-        validate: input => {
-          if (!input)
-            return 'You cannot skip this. Try again';
+    if (!flags.digMode) {
+      const answers = await prompt([
+        {
+          name: 'xsrf',
+          message: 'XSRF Token',
+          validate: input => {
+            if (!input)
+              return 'You cannot skip this. Try again';
 
-          return true;
-        }
-      },
-    ]);
+            return true;
+          }
+        },
+        {
+          name: 'session',
+          message: 'Session Token',
+          validate: input => {
+            if (!input)
+              return 'You cannot skip this. Try again';
 
-    grant.xsrf = answers.xsrf;
-    grant.session = answers.session;
+            return true;
+          }
+        },
+      ]);
+
+      grant.xsrf = answers.xsrf;
+      grant.session = answers.session;
+    }
 
     logger.warn('You are about to get yeeted. Goodluck!');
 
-    let query = Knex(database)('kamihime').select([ 'id', 'name', 'rarity' ])
-      .where('approved', 1);
-
-    const genericsOnly = parseArg([ '-g', '--generics' ]);
-    const forcedDownload = parseArg([ '-f', '--force' ]);
-
-    if (!genericsOnly && !forcedDownload)
-      query = query.andWhere('harem1Resource1', null);
+    let query = Knex(database)('kamihime').select([ 'id', 'name', 'rarity' ]);
 
     const latest = parseArg([ '-l', '--latest=' ]);
     const id = parseArg([ '-i', '--id=' ]);
@@ -90,25 +95,29 @@ export default async function start () {
       if (!val)
         throw new Error('ID value should be not empty.');
 
-      query = query.andWhere('id', val);
+      query = query.whereIn('id', val.split('-'));
     }
 
     if (type) {
       const _type = type.slice(2);
+      const whereClause = id ? 'andWhereRaw' : 'whereRaw';
 
       switch (_type) {
-        case 'eidolon': query = query.andWhereRaw('id LIKE \'e%\''); break;
-        case 'soul': query = query.andWhereRaw('id LIKE \'s%\''); break;
+        case 'eidolon': query = query[whereClause]('id LIKE \'e%\''); break;
+        case 'soul': query = query[whereClause]('id LIKE \'s%\''); break;
         case 'ssr+':
         case 'ssr':
         case 'sr':
         case 'r':
-          query = query.andWhereRaw(`id LIKE 'k%' AND rarity='${_type.toUpperCase()}'`);
+          query = query[whereClause](`id LIKE 'k%' AND rarity='${_type.toUpperCase()}'`);
           break;
       }
     }
 
-    let characters: ICharacter[] = await query;
+    if (!flags.genericsOnly && !flags.forced)
+      query = query[id || type ? 'andWhere' : 'where']('harem1Resource1', null);
+
+    let characters: ICharacter[] = await query[id || type || (!flags.genericsOnly && !flags.forced) ? 'andWhere' : 'where']('approved', 1);
 
     if (!characters.length) throw new Error('Nothing to be processed.');
 
@@ -118,8 +127,10 @@ export default async function start () {
     await new Extractor({
       logger,
       grant,
+      flags,
       base: {
         characters,
+        BLOWFISH_KEY: 'WD24kYA7UaiHMpNq6BQ',
         DESTINATION: {
           EPISODES: destinations.scenarios,
           MISC: destinations.zips

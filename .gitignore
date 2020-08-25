@@ -7,6 +7,7 @@ yarn-error.log
 scenarios
 zips
 auth.js
+auth.bk.js
 logs
 dist
 test

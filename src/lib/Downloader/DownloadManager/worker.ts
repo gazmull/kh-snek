@@ -6,13 +6,13 @@ import SFTP from 'ssh2-promise/dist/sftp'; // Need to fork this to update wrong 
 import { parentPort } from 'worker_threads';
 import Downloader from '..';
 import { Auth } from '../../../../typings/auth';
-import { downloadManagerData, ICharacter } from '../../../../typings/index';
+import { downloadManagerData, ICharacter, IExtractorOptions } from '../../../../typings/index';
 import ImageProcessor from '../../ImageProcessor';
 
 // tslint:disable:no-var-requires
 
 const { workerData }:
-  { workerData: { id: number, downloads: downloadManagerData, forced: boolean } } = require('worker_threads');
+  { workerData: { id: number, downloads: downloadManagerData, flags: IExtractorOptions['flags'] } } = require('worker_threads');
 const auth: Auth = require('../../../../auth');
 const ssh = new SSH2Promise(auth.ssh);
 let sftp: SFTP;
@@ -39,7 +39,7 @@ async function doGenerics (urls: string[]) {
   let current = 1;
   const dirName = `${auth.destinations.scenarios}misc/`;
 
-  if (!workerData.forced) {
+  if (!workerData.flags.forced) {
     const existingFiles = (await sftp.readdir(dirName).catch(() => []) as Array<{ filename: string }>)
       .filter(e => e && e.filename && !e.filename.endsWith('.webp'));
 
@@ -63,7 +63,7 @@ async function doGenerics (urls: string[]) {
       await sftp.writeFile(filePath, fileBuffer, 'binary');
       logger.info(`Written ${name} to server`);
 
-      if (/\.(?:jpe?g|png)$/.test(name)) {
+      if (/\.(?:jpe?g|png)$/.test(name) && !workerData.flags.noWEBP) {
         const webpBuffer = await ImageProcessor.toWebpBuffer(fileBuffer);
 
         // @ts-ignore
@@ -110,11 +110,13 @@ async function doSpecifics (chars: ICharacter[]) {
           logger.info(`Written ${name} to server`);
 
           if (/\.(?:jpe?g|png)$/.test(name)) {
-            const webpBuffer = await ImageProcessor.toWebpBuffer(fileBuffer);
+            if (!workerData.flags.noWEBP) {
+              const webpBuffer = await ImageProcessor.toWebpBuffer(fileBuffer);
 
-            // @ts-ignore
-            await sftp.writeFile(`${filePath}.webp`, webpBuffer, 'binary');
-            logger.info(`Written ${name}.webp to server`);
+              // @ts-ignore
+              await sftp.writeFile(`${filePath}.webp`, webpBuffer, 'binary');
+              logger.info(`Written ${name}.webp to server`);
+            }
 
             let processedImage: Buffer;
             let fileName = name;
