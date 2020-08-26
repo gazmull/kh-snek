@@ -1,12 +1,11 @@
 {
-  "name": "snek",
+  "name": "kh-snek",
   "version": "1.0.0",
   "description": "nocomment",
   "main": "dist/index.js",
   "scripts": {
     "test": "gulp",
     "dev:watch": "tsc -p . --watch",
-    "dev:lint-fix": "gulp lint --fix",
     "dev:lint": "gulp lint"
   },
   "engine": {
@@ -16,18 +15,18 @@
     "just",
     "snek"
   ],
-  "repository": "https://github.com/gazmull/snek.git",
-  "homepage": "https://github.com/gazmull/snek",
+  "repository": "https://github.com/gazmull/kh-snek.git",
+  "homepage": "https://github.com/gazmull/kh-snek",
   "author": "https://github.com/gazmull",
   "license": "MIT",
   "dependencies": {
     "@gazmull/logger": "github:gazmull/logger",
-    "@discordjs/collection": "0.1.5",
+    "@discordjs/collection": "0.1.6",
     "fs-extra": "^9.0.1",
     "gm": "^1.23.1",
-    "inquirer": "^7.3.2",
+    "inquirer": "^7.3.3",
     "jszip": "^3.5.0",
-    "knex": "^0.21.2",
+    "knex": "^0.21.5",
     "mysql2": "^2.1.0",
     "node-fetch": "^2.6.0",
     "ssh2-promise": "^0.1.7"
@@ -35,15 +34,15 @@
   "devDependencies": {
     "@types/fs-extra": "^9.0.1",
     "@types/gm": "^1.18.9",
-    "@types/inquirer": "^6.5.0",
+    "@types/inquirer": "^7.3.1",
     "@types/jszip": "^3.4.1",
-    "@types/node": "^14.0.24",
+    "@types/node": "^14.6.0",
     "@types/node-fetch": "^2.5.7",
+    "@typescript-eslint/eslint-plugin": "^3.10.1",
+    "@typescript-eslint/parser": "^3.10.1",
     "gulp": "^4.0.2",
-    "gulp-tslint": "^8.1.4",
+    "gulp-eslint": "^6.0.0",
     "gulp-typescript": "6.0.0-alpha.1",
-    "tslint": "^6.1.2",
-    "tslint-eslint-rules": "^5.4.0",
-    "typescript": "^3.9.7"
+    "typescript": "^4.0.2"
   }
 }

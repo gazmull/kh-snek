@@ -1,14 +1,13 @@
 import Collection from '@discordjs/collection';
 import Winston from '@gazmull/logger';
 import { prompt } from 'inquirer';
-import Knex from 'knex';
-import { Config as Database } from 'knex';
-import { ICharacter } from '../typings';
+import Knex, { Config as Database } from 'knex';
+import { ICharacter, IExtractorOptions } from '../typings';
 import { Directories } from '../typings/auth';
 import Extractor from './lib/Extractor';
 import { parseArg } from './lib/Util';
 
-// tslint:disable-next-line:no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { database, destinations }: { database: Database, destinations: Directories } = require('../auth');
 
 let code = 0;
@@ -16,35 +15,44 @@ const logger = new Winston('snek').logger;
 
 start();
 
+/** Starts the snek. */
 export default async function start () {
   try {
     logger.warn('kh-snek started...');
 
-    const answers = await prompt([
-      {
-        name: 'session',
-        message: 'Session Token',
-        validate: (input: string) => {
-          if (!input.trim())
-            return 'You cannot skip this. Try again';
+    const boolFlags = (flags: string[]) => Boolean(parseArg(flags));
+    const flags: IExtractorOptions['flags'] = {
+      digMode: boolFlags([ '-d', '--dig' ]),
+      forced: boolFlags([ '-f', '--force' ]),
+      genericsOnly: boolFlags([ '-g', '--generics' ]),
+      noHentai: boolFlags([ '--nohentai' ]),
+      noMP3: boolFlags([ '--nomp3' ]),
+      noWEBP: boolFlags([ '--nowebp' ]),
+      sceneInfoOnly: boolFlags([ '--nodl' ])
+    };
 
-          return true;
-        }
-      },
-    ]);
+    let session;
 
-    const session = answers.session;
+    if (!flags.digMode) {
+      const answers = await prompt([
+        {
+          name: 'session',
+          message: 'Session Token',
+          validate: (input: string) => {
+            if (!input.trim())
+              return 'You cannot skip this. Try again';
+
+            return true;
+          }
+        },
+      ]);
+
+      session = answers.session;
+    }
 
     logger.warn('You are about to get yeeted. Goodluck!');
 
-    let query = Knex(database)('kamihime').select([ 'id', 'name', 'rarity' ])
-      .where('approved', 1);
-
-    const genericsOnly = parseArg([ '-g', '--generics' ]);
-    const forcedDownload = parseArg([ '-f', '--force' ]);
-
-    if (!genericsOnly && !forcedDownload)
-      query = query.andWhere('harem1Resource1', null);
+    let query = Knex(database)('kamihime').select([ 'id', 'name', 'rarity' ]);
 
     const latest = parseArg([ '-l', '--latest=' ]);
     const id = parseArg([ '-i', '--id=' ]);
@@ -75,25 +83,31 @@ export default async function start () {
       if (!val)
         throw new Error('ID value should be not empty.');
 
-      query = query.andWhere('id', val);
+      query = query.whereIn('id', val.split('-'));
     }
 
     if (type) {
       const _type = type.slice(2);
+      const whereClause = id ? 'andWhereRaw' : 'whereRaw';
 
       switch (_type) {
-        case 'eidolon': query = query.andWhereRaw('id LIKE \'e%\''); break;
-        case 'soul': query = query.andWhereRaw('id LIKE \'s%\''); break;
+        case 'eidolon': query = query[whereClause]('id LIKE \'e%\''); break;
+        case 'soul': query = query[whereClause]('id LIKE \'s%\''); break;
         case 'ssr+':
         case 'ssr':
         case 'sr':
         case 'r':
-          query = query.andWhereRaw(`id LIKE 'k%' AND rarity='${_type.toUpperCase()}'`);
+          query = query[whereClause](`id LIKE 'k%' AND rarity='${_type.toUpperCase()}'`);
           break;
       }
     }
 
-    let characters: ICharacter[] = await query;
+    if (!flags.genericsOnly && !flags.forced)
+      query = query[id || type ? 'andWhere' : 'where']('harem1Resource1', null);
+
+    let characters: ICharacter[] = await query[id || type || (!flags.genericsOnly && !flags.forced)
+      ? 'andWhere'
+      : 'where']('approved', 1);
 
     if (!characters.length) throw new Error('Nothing to be processed.');
 
@@ -103,27 +117,23 @@ export default async function start () {
     await new Extractor({
       logger,
       session,
+      flags,
       base: {
         characters,
+        BLOWFISH_KEY: 'bLoWfIsH',
         DESTINATION: {
           EPISODES: destinations.scenarios,
           MISC: destinations.zips
         },
         URL: {
-          FG_IMAGE: SCENARIOS + 'fgimage/',
-          BG_IMAGE: SCENARIOS + 'bgimage/',
-          BGM: SCENARIOS + 'bgm/',
+          FG_IMAGE: `${SCENARIOS}fgimage/`,
+          BG_IMAGE: `${SCENARIOS}bgimage/`,
+          BGM: `${SCENARIOS}bgm/`,
           SCENARIOS,
           EPISODES: 'https://r.kamihimeproject.net/v1/episodes/',
-          SOULS: {
-            INFO: 'https://r.kamihimeproject.net/v1/a_jobs/'
-          },
-          EIDOLONS: {
-            SCENES: 'https://r.kamihimeproject.net/v1/gacha/harem_episodes/summons/'
-          },
-          KAMIHIMES: {
-            SCENES: 'https://r.kamihimeproject.net/v1/gacha/harem_episodes/characters/'
-          }
+          SOULS: { INFO: 'https://r.kamihimeproject.net/v1/a_jobs/' },
+          EIDOLONS: { SCENES: 'https://r.kamihimeproject.net/v1/gacha/harem_episodes/summons/' },
+          KAMIHIMES: { SCENES: 'https://r.kamihimeproject.net/v1/gacha/harem_episodes/characters/' }
         }
       }
     }).exec();

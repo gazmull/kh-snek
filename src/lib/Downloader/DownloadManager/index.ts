@@ -2,16 +2,18 @@ import Collection from '@discordjs/collection';
 import * as OS from 'os';
 import * as path from 'path';
 import { Worker } from 'worker_threads';
-import { downloadManagerData, ICharacter } from '../../../../typings';
-import { parseArg } from '../../Util';
+import { downloadManagerData, ICharacter, IExtractorOptions } from '../../../../typings';
 
 export default class DownloadManager {
 
-  constructor (data: downloadManagerData) {
+  constructor (data: downloadManagerData, flags: IExtractorOptions['flags']) {
     this.data = data;
+    this.flags = flags;
   }
 
   public data: downloadManagerData;
+
+  public flags: IExtractorOptions['flags'];
 
   /**
    * Would you like to drink these pair of jars of mine?
@@ -67,7 +69,7 @@ export default class DownloadManager {
 
   private _spawnWorker (id: number, downloads: downloadManagerData): Promise<string | Error> {
     return new Promise(resolve => {
-      const workerData = { id, downloads, forced: parseArg([ '-g', '--generics', '-f', '--force' ]) };
+      const workerData = { id, downloads, flags: this.flags || this.flags.genericsOnly };
       const worker = new Worker(path.join(__dirname, 'worker.js'), { workerData });
       let errored = false;
 

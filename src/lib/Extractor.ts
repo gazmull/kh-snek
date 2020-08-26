@@ -1,14 +1,15 @@
 import * as Knex from 'knex';
 import fetch from 'node-fetch';
 import SSH2Promise from 'ssh2-promise';
-import SFTP from 'ssh2-promise/dist/sftp'; // Need to fork this to update wrong types
+import SFTP from 'ssh2-promise/dist/sftp';
 import { Logger } from 'winston';
 import { ICharacter, IExtractorOptions, IScenarioSequence } from '../../typings';
 import Downloader from './Downloader';
 import DownloadManager from './Downloader/DownloadManager';
-import { getBlacklist, parseArg } from './Util';
+import { blowfish } from '../../vendor/Blowfish';
+import { getBlacklist } from './Util';
 
-// tslint:disable-next-line:no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const ssh = new SSH2Promise(require('../../auth').ssh);
 let sftp: SFTP;
 
@@ -20,6 +21,8 @@ const headers = {
 export default class Extractor {
   constructor (options: IExtractorOptions) {
     this.base = options.base;
+
+    this.flags = options.flags;
 
     this.logger = options.logger;
 
@@ -33,17 +36,28 @@ export default class Extractor {
 
     this.error = false;
 
-    headers['x-kh-session'] = options.session;
+    if (!options.flags.digMode)
+      headers['x-kh-session'] = options.session;
   }
 
   public base: IExtractorOptions['base'];
+
+  public flags: IExtractorOptions['flags'];
+
   public db: Knex;
+
   public miscFiles: string[];
+
   public blacklist: string[];
+
   public resourcesExtracted: number;
+
   public resourcesFound: number;
+
   public error: boolean;
+
   public logger: Logger;
+
   public verbose: boolean;
 
   public files (id: string, hash: string) {
@@ -66,7 +80,7 @@ export default class Extractor {
 
       this.logger.info(`Obtaining episodes for ${id}...`);
 
-      const resources = await this._getEpisodes(id);
+      const resources = await (this.flags.digMode ? this._bruteForceEpisodes(id) : this._getEpisodes(id));
       this.resourcesFound += resources.length;
       this.resourcesExtracted += await this._extract(id, resources);
     }
@@ -74,16 +88,11 @@ export default class Extractor {
     ssh.close();
     this.logger.info('Closed SSH connection. (Not necessary anymore)');
 
-    if (!process.argv.includes('--nodl')) {
-      const genericsOnly = Boolean(
-        process.argv.find(el => [ '-g', '--generics' ].some(f => new RegExp(`^${f}`, 'i').test(el)))
-      );
-
-      await this._download(genericsOnly);
-    }
+    if (!this.flags.sceneInfoOnly)
+      await this._download(this.flags.genericsOnly);
 
     this.logger.info([
-      // tslint:disable-next-line: max-line-length
+      // eslint-disable-next-line max-len
       `Extracted ${this.resourcesExtracted} resources from ${this.base.characters.length} characters. (Expected: ${this.resourcesFound})`,
       this.error
         ? [
@@ -97,6 +106,47 @@ export default class Extractor {
   }
 
   // -- Utils
+
+  private async _bruteForceEpisodes (id: string) {
+    const isSSROrSRKamihime = id.startsWith('k')
+      && [ 'SSR', 'SR' ].includes(this.base.characters.find(i => i.id === id).rarity);
+    const isEido = id.startsWith('e');
+    const isSoul = id.startsWith('s');
+    const type = isEido ? 'summon' : isSoul ? 'job' : 'character';
+
+    /**
+     * Resolves the episode's folder name.
+     * @param episode Self-explanatory
+     * @param questType `1` for Story, `2` for Scenario
+     */
+    const resolveFolderName = (episode: number, questType: number) =>
+      this.encrypt(`${type}_${id.slice(1)}-${episode}-${questType}-${questType === 1 ? 'S' : 'H'}`);
+
+    const folderNames: string[] = [ resolveFolderName(1, 1), resolveFolderName(2, 1) ];
+
+    if (this.flags.noHentai)
+      return folderNames;
+
+    folderNames.push.apply(folderNames, [ resolveFolderName(2, 2) ]);
+
+    if (isSSROrSRKamihime)
+      folderNames.push.apply(folderNames, [ resolveFolderName(3, 1), resolveFolderName(3, 2) ]);
+
+    const result = {
+      harem1Resource1: folderNames[0],
+      harem2Resource1: folderNames[1],
+      harem2Resource2: folderNames[2],
+      harem3Resource1: folderNames[3],
+      harem3Resource2: folderNames[4]
+    };
+
+    for (const [ k, v ] of Object.entries(result))
+      if (v)
+        this.base.characters.find(e => e.id === id).resources.set(k as any, { hash: v, urls: [] });
+
+
+    return folderNames;
+  }
 
   private async _getEpisodes (id: string) {
     try {
@@ -147,7 +197,7 @@ export default class Extractor {
       episodes = [ predicted + (isT4 ? 1 : -1), predicted + (isT4 ? 2 : 0) ];
     }
     // -- For characters with no hentai (e.g. Haruhi Suzumiya)
-    else if (parseArg([ '--nohentai' ]))
+    else if (this.flags.noHentai)
       episodes = [ episodeId, episodeId + 1 ];
     else if ([ 'SSR+', 'R' ].includes(this.base.characters.find(i => i.id === id).rarity) || id.startsWith('e'))
       episodes = [ episodeId - 1, episodeId ];
@@ -204,7 +254,7 @@ export default class Extractor {
 
     for (const arr of toDownload)
       try {
-        const managerKun = new DownloadManager(arr);
+        const managerKun = new DownloadManager(arr, this.flags);
         const instances = await managerKun.araAra();
 
         for (const log of instances)
@@ -229,7 +279,7 @@ export default class Extractor {
       const resourceLastFour = resource.slice(-4).split('');
 
       resourceLastFour.splice(2, 0, '/');
-      const folder = resourceLastFour.join('') + '/';
+      const folder = `${resourceLastFour.join('')}/`;
 
       try {
         const data = await fetch(this.base.URL.SCENARIOS + folder + resource + file, { headers });
@@ -240,7 +290,7 @@ export default class Extractor {
             `Failed to download ${file} for ${resource} (${this.base.URL.SCENARIOS + folder + resource + file})`
           );
 
-          throw new Error(data.status + `: ${data.statusText}`);
+          throw new Error(`${data.status}: ${data.statusText}`);
         }
 
         if (file === '/scenario/first.ks')
@@ -337,7 +387,7 @@ export default class Extractor {
           case 'playbgm': {
             const url = this.base.URL.BGM + attribute.storage;
 
-            if (!this.miscFiles.includes(url))
+            if (!this.miscFiles.includes(url) && !this.flags.noMP3)
               this.miscFiles.push(url);
 
             lines.push({ bgm: attribute.storage });
@@ -380,9 +430,10 @@ export default class Extractor {
 
             if (!isGetIntro) continue;
 
-            this.files(id, resource).urls.push(
-              `${this.base.URL.SCENARIOS}${folder}${resource}/sound/${attribute.storage}`
-            );
+            if (!this.flags.noMP3)
+              this.files(id, resource).urls
+                .push(`${this.base.URL.SCENARIOS}${folder}${resource}/sound/${attribute.storage}`);
+
             lines.push({ voice: attribute.storage });
             break;
           }
@@ -434,6 +485,7 @@ export default class Extractor {
         Object.assign(sequence, { bgm: lastBGM });
 
       if (sequence.chara) {
+        // eslint-disable-next-line no-irregular-whitespace
         sequence.chara = sequence.chara.replace(/[ ]/g, ' ');
 
         lines.push(sequence);
@@ -445,8 +497,7 @@ export default class Extractor {
     const scriptPath = `${this.base.DESTINATION.EPISODES}${id}/${resource}/`;
 
     await ssh.exec(`mkdir -p ${scriptPath}`);
-    // @ts-ignore
-    await sftp.writeFile(scriptPath + 'script.json', JSON.stringify({ scenario: lines }));
+    await sftp.writeFile(`${scriptPath }script.json`, JSON.stringify({ scenario: lines }), {});
 
     return true;
   }
@@ -463,7 +514,9 @@ export default class Extractor {
 
       if (entry.bgm) {
         if (!this.blacklisted(entry.bgm)) {
-          this.miscFiles.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${entry.bgm}`);
+          if (!this.flags.noMP3)
+            this.miscFiles.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${entry.bgm}`);
+
           fileNames.push(entry.bgm);
         }
 
@@ -492,9 +545,11 @@ export default class Extractor {
       for (const line of entry.talk) {
         const talkEntry = {};
 
-        if (line.hasOwnProperty('voice')) {
+        if (Object.prototype.hasOwnProperty.call(line, 'voice')) {
           if (!this.blacklisted(line.voice)) {
-            this.files(id, resource).urls.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${line.voice}`);
+            if (!this.flags.noMP3)
+              this.files(id, resource).urls.push(`${this.base.URL.SCENARIOS}${folder}${resource}/${line.voice}`);
+
             fileNames.push(line.voice);
           }
 
@@ -531,15 +586,17 @@ export default class Extractor {
     const path = `${this.base.DESTINATION.EPISODES}${id}/${resource}/`;
 
     await ssh.exec(`mkdir -p ${path}`);
-    // @ts-ignore
-    await sftp.writeFile(path + 'script.json', JSON.stringify({ scenario: lines }));
-    // @ts-ignore
-    await sftp.writeFile(path + 'files.rsc', fileNames.join(','));
+    await sftp.writeFile(`${path }script.json`, JSON.stringify({ scenario: lines }), {});
+    await sftp.writeFile(`${path }files.rsc`, fileNames.join(','), {});
 
     return true;
   }
 
   private blacklisted (filename: string) {
     return this.blacklist.includes(filename);
+  }
+
+  private encrypt (text: string) {
+    return blowfish.encrypt(text, this.base.BLOWFISH_KEY, { outputType: 1, cipherMode: 0 });
   }
 }

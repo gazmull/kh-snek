@@ -14,7 +14,7 @@ export default class Downloader {
    * @param returnData Immediately return the raw data instead of writing to destination.
    * @returns path of the downloaded file; if returnData is true, it returns Buffer.
    */
-  public async download (returnData: boolean = false): Promise<string | Buffer> {
+  public async download (returnData = false): Promise<string | Buffer> {
     const url = this.options.url;
     const destDirectory = this.options.destination;
     const filename = this.options.name || this.options.url.split('/').pop();
