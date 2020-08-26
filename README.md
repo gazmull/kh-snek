@@ -13,6 +13,7 @@ You don't.
 - `-f`, `--force` — Forcefully download assets
 - `--nohentai` — Make extractor do extraction for characters with no scenario (e.g. Haruhi Suzumiya)
 - `--nodl` — Don't download assets (only parse scene info)
+- `--nomp3` — Don't download sound files
 - `--nowebp` — Don't make webp version of images
 - `-l#`, `--latest=#` — Process the latest characters (`#` being number of characters) **not compatible with `--id`**
 - `-i$`, `--id=$` — Process specific character (`$` being character ID). **not compatible with `--latest`**

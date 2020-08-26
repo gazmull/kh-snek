@@ -1,7 +1,7 @@
 const fs = require('fs-extra');
 const gulp = require('gulp');
 const ts = require('gulp-typescript');
-const tslint = require('gulp-tslint');
+const eslint = require('gulp-eslint');
 
 const project = ts.createProject('tsconfig.json');
 
@@ -11,9 +11,10 @@ const paths = {
 };
 
 gulp.task('lint', () => {
-  return gulp.src(paths.src)
-    .pipe(tslint({ configuration: './.tslint.js', fix: process.argv.includes('--fix') }))
-    .pipe(tslint.report());
+  return gulp.src(`${paths.src}/**/*.ts`)
+    .pipe(eslint())
+    .pipe(eslint.formatEach())
+    .pipe(eslint.failOnError());
 });
 
 gulp.task('ts', () => {
@@ -24,6 +25,7 @@ gulp.task('ts', () => {
 
 const commonTasks = [ clean, 'lint', 'ts' ];
 
+/** Removes dist directory. */
 function clean () {
   return fs.remove(paths.dist);
 }

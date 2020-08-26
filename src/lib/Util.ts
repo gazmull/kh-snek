@@ -1,18 +1,23 @@
 import { Github as gh } from '../../typings/auth';
+import fetch from 'node-fetch';
 
+/** Returns the first argument found in `process.argv`..
+ * @param args - The arguments to look in `process.argv`.
+ */
 export function parseArg (args: string[]) {
   return process.argv.find(el => args.some(f => new RegExp(`^${f}`, 'i').test(el)));
 }
 
+/** Obtains the blacklisted files list. */
 export async function getBlacklist () {
-  const fetch = require('node-fetch');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { github }: { github: gh } = require('../../auth');
 
   try {
-    const response = await fetch('https://api.github.com/gists/' + github.gist, {
+    const response = await fetch(`https://api.github.com/gists/${github.gist}`, {
       headers: {
         Accept: 'application/vnd.github.v3+json',
-        Authorization: 'token ' + github.token
+        Authorization: `token ${github.token}`
       },
       method: 'GET'
     });

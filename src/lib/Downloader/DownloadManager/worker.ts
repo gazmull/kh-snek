@@ -1,25 +1,34 @@
+// SSH2-Promise has wrong types so:
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+
 import Winston from '@gazmull/logger';
 import Zip from 'jszip';
 import Knex from 'knex';
 import SSH2Promise from 'ssh2-promise';
-import SFTP from 'ssh2-promise/dist/sftp'; // Need to fork this to update wrong types
+import SFTP from 'ssh2-promise/dist/sftp';
 import { parentPort } from 'worker_threads';
 import Downloader from '..';
 import { Auth } from '../../../../typings/auth';
 import { downloadManagerData, ICharacter, IExtractorOptions } from '../../../../typings/index';
 import ImageProcessor from '../../ImageProcessor';
 
-// tslint:disable:no-var-requires
+/* eslint-disable @typescript-eslint/no-var-requires */
 
-const { workerData }:
-  { workerData: { id: number, downloads: downloadManagerData, flags: IExtractorOptions['flags'] } } = require('worker_threads');
+const { workerData }: {
+  workerData: {
+    id: number,
+    downloads: downloadManagerData,
+    flags: IExtractorOptions['flags']
+  }
+} = require('worker_threads');
 const auth: Auth = require('../../../../auth');
 const ssh = new SSH2Promise(auth.ssh);
 let sftp: SFTP;
 const logger = new Winston(`worker.${workerData.id}`, `[worker-${workerData.id}]`).logger;
 
-// tslint:enable:no-var-requires
+/* eslint-enable @typescript-eslint/no-var-requires */
 
+/** Intiailise download to remote server. */
 async function start (data: downloadManagerData) {
   try {
     logger.info('connecting to remote server...');
@@ -35,6 +44,7 @@ async function start (data: downloadManagerData) {
   } catch (err) { throw new Error(err); }
 }
 
+/** Downloads story assets. */
 async function doGenerics (urls: string[]) {
   let current = 1;
   const dirName = `${auth.destinations.scenarios}misc/`;
@@ -81,6 +91,7 @@ async function doGenerics (urls: string[]) {
   return true;
 }
 
+/** Downloads scenario assets. */
 async function doSpecifics (chars: ICharacter[]) {
   for (const char of chars) {
     logger.info(`Downloading Specific assets for ${char.id}...`);
@@ -166,7 +177,7 @@ async function doSpecifics (chars: ICharacter[]) {
           logger.warn(`Ignored Zip operation: not h_anime (${char.id}'s ${key})`);
 
         await Knex(auth.database)('kamihime').update({ [key]: hash }).where('id', char.id);
-        logger.info(`Saved ${char.id}'s ${key} hash to DB`); // test this
+        logger.info(`Saved ${char.id}'s ${key} hash to DB`);
       } catch (f) {
         parentPort.postMessage('errored');
         logger.error(`[${char.id}] [${key}]\n ${f.stack || f}`);

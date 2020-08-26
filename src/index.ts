@@ -1,14 +1,13 @@
 import Collection from '@discordjs/collection';
 import Winston from '@gazmull/logger';
 import { prompt } from 'inquirer';
-import Knex from 'knex';
-import { Config as Database } from 'knex';
+import Knex, { Config as Database } from 'knex';
 import { ICharacter, IExtractorOptions } from '../typings';
 import { Directories, KamihimeGrant } from '../typings/auth';
 import Extractor from './lib/Extractor';
 import { parseArg } from './lib/Util';
 
-// tslint:disable-next-line:no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { database, destinations }: { database: Database, destinations: Directories } = require('../auth');
 const grant: KamihimeGrant = {
   xsrf: '',
@@ -20,6 +19,7 @@ const logger = new Winston('snek').logger;
 
 start();
 
+/** Starts the snek. */
 export default async function start () {
   try {
     logger.warn('kh-snek started...');
@@ -30,6 +30,7 @@ export default async function start () {
       forced: boolFlags([ '-f', '--force' ]),
       genericsOnly: boolFlags([ '-g', '--generics' ]),
       noHentai: boolFlags([ '--nohentai' ]),
+      noMP3: boolFlags([ '--nomp3' ]),
       noWEBP: boolFlags([ '--nowebp' ]),
       sceneInfoOnly: boolFlags([ '--nodl' ])
     };
@@ -117,7 +118,9 @@ export default async function start () {
     if (!flags.genericsOnly && !flags.forced)
       query = query[id || type ? 'andWhere' : 'where']('harem1Resource1', null);
 
-    let characters: ICharacter[] = await query[id || type || (!flags.genericsOnly && !flags.forced) ? 'andWhere' : 'where']('approved', 1);
+    let characters: ICharacter[] = await query[id || type || (!flags.genericsOnly && !flags.forced)
+      ? 'andWhere'
+      : 'where']('approved', 1);
 
     if (!characters.length) throw new Error('Nothing to be processed.');
 
@@ -136,20 +139,14 @@ export default async function start () {
           MISC: destinations.zips
         },
         URL: {
-          FG_IMAGE: SCENARIOS + 'fgimage/',
-          BG_IMAGE: SCENARIOS + 'bgimage/',
-          BGM: SCENARIOS + 'bgm/',
+          FG_IMAGE: `${SCENARIOS}fgimage/`,
+          BG_IMAGE: `${SCENARIOS}bgimage/`,
+          BGM: `${SCENARIOS}bgm/`,
           SCENARIOS,
           EPISODES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/episodes/',
-          SOULS: {
-            INFO: 'https://cf.r.kamihimeproject.dmmgames.com/v1/a_jobs/'
-          },
-          EIDOLONS: {
-            SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/summons/'
-          },
-          KAMIHIMES: {
-            SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/characters/'
-          }
+          SOULS: { INFO: 'https://cf.r.kamihimeproject.dmmgames.com/v1/a_jobs/' },
+          EIDOLONS: { SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/summons/' },
+          KAMIHIMES: { SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/characters/' }
         }
       }
     }).exec();

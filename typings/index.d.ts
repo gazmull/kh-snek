@@ -12,6 +12,7 @@ export interface IExtractorOptions {
     forced: boolean;
     genericsOnly: boolean;
     noHentai: boolean;
+    noMP3: boolean;
     noWEBP: boolean;
     sceneInfoOnly: boolean;
   }
