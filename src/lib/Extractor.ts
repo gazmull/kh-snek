@@ -561,10 +561,12 @@ export default class Extractor {
           ? line.words
             .replace(/[[\]"]/g, '')
             .replace(/(\.{1,3}|…|,)(?=[^\s\W])/g, '$& ')
+            .replace(/&nbsp;?/gi, ' ')
           : ' ';
         line.chara = line.chara
           ? line.chara
             .replace(/(["%])/g, '\\$&')
+            .replace(/&nbsp;?/gi, ' ')
           : ' ';
 
         Object.assign(talkEntry, { chara: line.chara, words: line.words });
