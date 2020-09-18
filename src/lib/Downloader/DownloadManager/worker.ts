@@ -59,7 +59,7 @@ async function doGenerics (urls: string[]) {
   }
 
   for (const url of urls) {
-    const name = url.split('/').pop();
+    const name = url.split('/').pop().trim();
     const file = new Downloader({ url });
 
     logger.info(`Downloading Story generics... [${current} / ${urls.length}]`);
@@ -103,10 +103,9 @@ async function doSpecifics (chars: ICharacter[]) {
 
       logger.info(`Downloading ${key} Specific assets...`);
 
-      for (let url of urls) {
-        url = url.trim();
+      for (const url of urls) {
         const destination = `${auth.destinations.scenarios}${char.id}/${hash}/`;
-        const name = url.split('/').pop();
+        const name = url.split('/').pop().trim();
         const file = new Downloader({ url });
         const filePath = `${destination}${name}`;
 
