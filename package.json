@@ -25,24 +25,24 @@
     "fs-extra": "^9.0.1",
     "gm": "^1.23.1",
     "inquirer": "^7.3.3",
-    "jszip": "^3.5.0",
+    "jszip": "^3.6.0",
     "knex": "^0.21.5",
-    "mysql2": "^2.1.0",
-    "node-fetch": "^2.6.0",
+    "mysql2": "^2.2.5",
+    "node-fetch": "^2.6.1",
     "ssh2-promise": "^0.1.7"
   },
   "devDependencies": {
-    "@types/fs-extra": "^9.0.1",
+    "@types/fs-extra": "^9.0.10",
     "@types/gm": "^1.18.9",
     "@types/inquirer": "^7.3.1",
     "@types/jszip": "^3.4.1",
-    "@types/node": "^14.6.0",
-    "@types/node-fetch": "^2.5.7",
-    "@typescript-eslint/eslint-plugin": "^3.10.1",
-    "@typescript-eslint/parser": "^3.10.1",
+    "@types/node": "^14.14.37",
+    "@types/node-fetch": "^2.5.10",
+    "@typescript-eslint/eslint-plugin": "^4.21.0",
+    "@typescript-eslint/parser": "^4.21.0",
     "gulp": "^4.0.2",
     "gulp-eslint": "^6.0.0",
     "gulp-typescript": "6.0.0-alpha.1",
-    "typescript": "^4.0.2"
+    "typescript": "^4.2.4"
   }
 }
