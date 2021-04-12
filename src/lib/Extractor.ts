@@ -410,13 +410,18 @@ export default class Extractor {
 
           case 'chara_show': {
             name = chara[attribute.name] ? chara[attribute.name].name : '';
+            const file = chara[attribute.name].storage;
+            const isOK = await Downloader.isOK(this.base.URL.FG_IMAGE + file);
 
-            lines.push({ expression: chara[attribute.name] ? chara[attribute.name].storage : '' });
+            lines.push({ expression: chara[attribute.name] && isOK ? file : '' });
             break;
           }
 
           case 'chara_mod': {
-            lines.push({ expression: chara[attribute.name] ? chara[attribute.name].face[attribute.face] : '' });
+            const file = chara[attribute.name].face[attribute.face];
+            const isOK = await Downloader.isOK(this.base.URL.FG_IMAGE + file);
+
+            lines.push({ expression: chara[attribute.name] && isOK ? file : '' });
             break;
           }
 
@@ -524,18 +529,19 @@ export default class Extractor {
       }
 
       if (entry.film) {
-        const url = `${this.base.URL.SCENARIOS}${folder}${resource}/${entry.film}`;
+        const hdFilm = entry.film.replace(/(\.jpg)/i, '_h$1');
+        const url = `${this.base.URL.SCENARIOS}${folder}${resource}/${hdFilm}`;
 
         if (!this.blacklisted(entry.film) && ![ 'black.jpg', 'pink_s.jpg' ].includes(entry.film)) {
           this.files(id, resource).urls.push(url);
-          fileNames.push(entry.film);
+          fileNames.push(hdFilm);
         }
 
         const fps = Number(entry.fps);
 
         Object.assign(entryData, {
           seconds: fps === 1 || fps === 16 ? 1 : fps === 24 ? '0.67' : 2,
-          sequence: entry.film,
+          sequence: hdFilm,
           steps: fps === 1 ? 1 : 16
         });
       }

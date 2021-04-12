@@ -49,6 +49,11 @@ export default class Downloader {
     } catch { return false; }
   }
 
+  public static isOK (url: string): Promise<boolean> {
+    return fetch(url, { method: 'HEAD', headers: this.headers })
+      .then(res => res.ok);
+  }
+
   public static get headers () {
     return {
       'user-agent': [

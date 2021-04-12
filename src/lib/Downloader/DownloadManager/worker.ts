@@ -105,7 +105,11 @@ async function doSpecifics (chars: ICharacter[]) {
 
       for (const url of urls) {
         const destination = `${auth.destinations.scenarios}${char.id}/${hash}/`;
-        const name = url.split('/').pop().trim();
+        let name = url.split('/').pop().trim();
+
+        if (name.endsWith('h.jpg'))
+          name = name.replace('_h.jpg', '.jpg');
+
         const file = new Downloader({ url });
         const filePath = `${destination}${name}`;
 
