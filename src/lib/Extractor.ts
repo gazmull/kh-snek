@@ -534,14 +534,14 @@ export default class Extractor {
 
         if (!this.blacklisted(entry.film) && ![ 'black.jpg', 'pink_s.jpg' ].includes(entry.film)) {
           this.files(id, resource).urls.push(url);
-          fileNames.push(hdFilm);
+          fileNames.push(entry.film);
         }
 
         const fps = Number(entry.fps);
 
         Object.assign(entryData, {
           seconds: fps === 1 || fps === 16 ? 1 : fps === 24 ? '0.67' : 2,
-          sequence: hdFilm,
+          sequence: entry.film,
           steps: fps === 1 ? 1 : 16
         });
       }
