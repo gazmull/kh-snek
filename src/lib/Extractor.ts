@@ -1,7 +1,7 @@
 import * as Knex from 'knex';
 import fetch from 'node-fetch';
 import SSH2Promise from 'ssh2-promise';
-import SFTP from 'ssh2-promise/dist/sftp';
+import SFTP from 'ssh2-promise/lib/sftp';
 import { Logger } from 'winston';
 import { ICharacter, IExtractorOptions, IScenarioSequence } from '../../typings';
 import Downloader from './Downloader';

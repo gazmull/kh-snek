@@ -5,7 +5,7 @@ import Winston from '@gazmull/logger';
 import Zip from 'jszip';
 import Knex from 'knex';
 import SSH2Promise from 'ssh2-promise';
-import SFTP from 'ssh2-promise/dist/sftp';
+import SFTP from 'ssh2-promise/lib/sftp';
 import { parentPort } from 'worker_threads';
 import Downloader from '..';
 import { Auth } from '../../../../typings/auth';
