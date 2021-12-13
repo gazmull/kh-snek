@@ -276,10 +276,10 @@ export default class Extractor {
       const file = [ 0, 1, 3 ].includes(resources.indexOf(resource))
         ? '/scenario/first.ks'
         : '/scenario.json';
-      const resourceLastFour = resource.slice(-4).split('');
+      const resourceLastSix = resource.slice(-6).split('');
 
-      resourceLastFour.splice(2, 0, '/');
-      const folder = `${resourceLastFour.join('')}/`;
+      resourceLastSix.splice(3, 0, '/');
+      const folder = `${resourceLastSix.join('')}/`;
 
       try {
         const data = await fetch(this.base.URL.SCENARIOS + folder + resource + file, { headers });
