@@ -3,6 +3,7 @@ import { KamihimeGrant } from './auth';
 import SSH2Promise from 'ssh2-promise';
 import SFTP from 'ssh2-promise/lib/sftp';
 import Collection from '@discordjs/collection';
+import Knex from 'knex';
 
 export interface IExtractorOptions {
   logger: Logger;
@@ -40,6 +41,7 @@ export interface IExtractorOptions {
       }
     };
   };
+  db: Knex;
 }
 
 export type downloadManagerData = (string | ICharacter)[];

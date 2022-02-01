@@ -22,6 +22,8 @@ export default class Extractor {
   constructor (options: IExtractorOptions) {
     this.base = options.base;
 
+    this.db = options.db;
+
     this.flags = options.flags;
 
     this.logger = options.logger;
@@ -83,6 +85,9 @@ export default class Extractor {
       const resources = await (this.flags.digMode ? this._bruteForceEpisodes(id) : this._getEpisodes(id));
       this.resourcesFound += resources.length;
       this.resourcesExtracted += await this._extract(id, resources);
+
+      await this.db('kamihime').update({ mUpdated: new Date().toISOString().slice(0, 19).replace('T', ' ') })
+        .where({ id });
     }
 
     ssh.close();

@@ -16,6 +16,7 @@ const grant: KamihimeGrant = {
 
 let code = 0;
 const logger = new Winston('snek').logger;
+const db = Knex(database);
 
 start();
 
@@ -65,7 +66,7 @@ export default async function start () {
 
     logger.warn('You are about to get yeeted. Goodluck!');
 
-    let query = Knex(database)('kamihime').select([ 'id', 'name', 'rarity' ]);
+    let query = db('kamihime').select([ 'id', 'name', 'rarity' ]);
 
     const latest = parseArg([ '-l', '--latest=' ]);
     const id = parseArg([ '-i', '--id=' ]);
@@ -131,6 +132,7 @@ export default async function start () {
       logger,
       grant,
       flags,
+      db,
       base: {
         characters,
         BLOWFISH_KEY: 'WD24kYA7UaiHMpNq6BQ',
