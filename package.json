@@ -28,7 +28,7 @@
     "jszip": "^3.7.1",
     "knex": "^0.21.5",
     "mysql2": "^2.3.3",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^2.6.7",
     "ssh2-promise": "^0.1.7"
   },
   "devDependencies": {
