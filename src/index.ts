@@ -126,7 +126,7 @@ export default async function start () {
     if (!characters.length) throw new Error('Nothing to be processed.');
 
     characters = characters.map(char => ({ ...char, resources: new Collection() }));
-    const SCENARIOS = 'https://cf.static.r.kamihimeproject.dmmgames.com/scenarios/';
+    const SCENARIOS = 'https://gnkh-resource-r.prod.nkh.dmmgames.com/scenarios/';
 
     await new Extractor({
       logger,
@@ -145,10 +145,10 @@ export default async function start () {
           BG_IMAGE: `${SCENARIOS}bgimage/`,
           BGM: `${SCENARIOS}bgm/`,
           SCENARIOS,
-          EPISODES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/episodes/',
-          SOULS: { INFO: 'https://cf.r.kamihimeproject.dmmgames.com/v1/a_jobs/' },
-          EIDOLONS: { SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/summons/' },
-          KAMIHIMES: { SCENES: 'https://cf.r.kamihimeproject.dmmgames.com/v1/gacha/harem_episodes/characters/' }
+          EPISODES: 'https://gnkh-api-r.prod.nkh.dmmgames.com/v1/episodes/',
+          SOULS: { INFO: 'https://gnkh-api-r.prod.nkh.dmmgames.com/v1/a_jobs/' },
+          EIDOLONS: { SCENES: 'https://gnkh-api-r.prod.nkh.dmmgames.com/v1/gacha/harem_episodes/summons/' },
+          KAMIHIMES: { SCENES: 'https://gnkh-api-r.prod.nkh.dmmgames.com/v1/gacha/harem_episodes/characters/' }
         }
       }
     }).exec();

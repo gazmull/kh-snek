@@ -15,7 +15,7 @@ export interface Github {
  * This is used for logging into the game to extract all episodes.
  * Please make sure to avoid using the game while doing this to avoid being blocked from the game.
  *
- * Get your credentials via `Site Information` -> `Cookies` -> Expand `cf.r.kamihimeproject.dmmgames.com`
+ * Get your credentials via `Site Information` -> `Cookies` -> Expand `gnkh-api-r.prod.nkh.dmmgames.com`
  * @property session The user's Session value.
  * @property xsrf The user's XSRF Token value.
  */

@@ -84,6 +84,9 @@ export default class Extractor {
 
       const resources = await (this.flags.digMode ? this._bruteForceEpisodes(id) : this._getEpisodes(id));
       this.resourcesFound += resources.length;
+
+      this.logger.info(`Found ${resources.length} resources folders`);
+
       this.resourcesExtracted += await this._extract(id, resources);
 
       await this.db('kamihime').update({ mUpdated: new Date().toISOString().slice(0, 19).replace('T', ' ') })
@@ -298,14 +301,18 @@ export default class Extractor {
           throw new Error(`${data.status}: ${data.statusText}`);
         }
 
-        if (file === '/scenario/first.ks')
+        if (file === '/scenario/first.ks') {
+          this.logger.info(`${resource} - Story`);
+
           await this._doStory({
             id,
             resource,
             script,
             folder
           });
-        else {
+
+          this.logger.info(`${resource} - Story [FINISHED]`);
+        } else {
           const mainData = script
             .replace(/(.*?),\s*(\}|])/g, '$1$2')
             .replace(/;\s*?$/, '')
@@ -313,12 +320,16 @@ export default class Extractor {
             .replace(/(?<!\\)”/g, '"');
           const json: IScenarioSequence[] = JSON.parse(mainData);
 
+          this.logger.info(`${resource} - Scenario`);
+
           await this._doScenario({
             id,
             resource,
             script: json,
             folder
           });
+
+          this.logger.info(`${resource} - Scenario [FINISHED]`);
         }
 
         this.logger.info(`Extracted ${id} resource script ${resource}`);
